@@ -146,7 +146,7 @@ def make_qdyn_model(
     else:
         model.add_lindblad_op(L, op_unit='sqrt_%s' % energy_unit,
                               add_to_H_jump='indexed')
-    model.add_ham(H0, op_unit='energy_unit', op_type='potential')
+    model.add_ham(H0, op_unit=energy_unit, op_type='potential')
 
     for i, control_sym in enumerate(control_syms):
         H_d = convert_to_qutip(
