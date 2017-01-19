@@ -85,7 +85,7 @@ def err_state_to_state(target_state, final_states_glob):
 
 def make_qdyn_model(
         network_slh, num_vals, controls, energy_unit='MHz',
-        mcwf=False, non_herm=False, states=None):
+        mcwf=False, non_herm=False, states=None, add_observables=False):
     """Construct a QDYN LevelModel for a two-node network, configured for
     propagation
 
@@ -103,6 +103,8 @@ def make_qdyn_model(
             propagated
         states (dict or None): dict label => state (numpy array of amplitudes).
             If None, no state will be added to the model.
+        add_observables (bool): flag whether to add any observables to the
+            config file. Only do this for propagation, not for OCT
 
     Notes:
 
@@ -114,8 +116,8 @@ def make_qdyn_model(
         corresponding Pulse instance which may or may not be the same as the
         `energy_unit` argument.
 
-        The resulting model does not define observable, or OCT parameters. If
-        desired, these must be added separately.
+        The resulting model defines no OCT parameters. If desired, these must
+        be added separately.
     """
 
     control_syms = list(controls.keys())
@@ -172,6 +174,18 @@ def make_qdyn_model(
         for label, psi in states.items():
             assert psi.shape[0] == H0.shape[0]
             model.add_state(psi, label)
+
+    if add_observables:
+        model.add_observable(
+            L.dag()*L, outfile='darkstate_cond.dat', exp_unit='dimensionless',
+            time_unit='microsec', col_label='<L^+L>', is_real=True)
+        for (i, j) in [(0, 0), (0, 1), (1, 0), (1, 1)]:
+            ket = logical_2q_state(hs, i, j)
+            rho = ket * ket.dag()
+            model.add_observable(
+                rho, outfile='qubit_pop.dat', exp_unit='dimensionless',
+                time_unit='microsec', col_label='P(%d%d)' % (i, j),
+                is_real=True)
 
     model.user_data['time_unit'] = time_unit
     model.user_data['write_jump_record'] = 'jump_record.dat'
