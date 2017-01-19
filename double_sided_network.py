@@ -12,7 +12,7 @@ def node_symbol(node_index):
 
 def network_circuit(n_nodes, topology='open'):
     """Construct the network with the given topology"""
-    if topology not in ['open', 'bs_fb']:
+    if topology not in ['open', 'FB']:
         raise ValueError("Unknown topology: %s" % topology)
     nodes = []
     connections = []
