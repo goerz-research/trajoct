@@ -19,12 +19,12 @@ def network_circuit(n_nodes, topology='open'):
     prev_node = None
     for i in range(n_nodes):
         ind = i + 1
-        cur_node = CircuitSymbol("Node%d" % ind, cdim=2)
+        cur_node = node_symbol(ind)
         nodes.append(cur_node)
         if prev_node is not None:
             if topology in [None, 'open', 'FB']:
                 connections.append(((prev_node, 0), (cur_node, 0)))
-                connections.append(((cur_node, 1), (prev_node, 0)))
+                connections.append(((cur_node, 1), (prev_node, 1)))
             else:
                 raise ValueError("Unknown topology: %s" % topology)
         prev_node = cur_node
@@ -34,13 +34,17 @@ def network_circuit(n_nodes, topology='open'):
     return circuit
 
 
-def network_slh(n_cavity, n_nodes, topology='open', _node_slh=None):
+def network_slh(
+        n_cavity, n_nodes, topology='open', _network_circuit=None,
+        _node_slh=None):
     """Set up a chain of JC system with two channels
 
     Args:
         n_cavity (int): Number of levels in the cavity (numerical truncation)
         n_nodes (int):  Number of nodes in the chain
         topology (str or None): How the nodes should be linked up, see below
+        _network_circuit (callable or None): routine that returns the network
+            circuit. If None, `network_circuit`
         _node_slh (callable or None): routine that returns the SLH model for a
             single node. If None, `double_sided_node.node_slh`
 
@@ -61,7 +65,9 @@ def network_slh(n_cavity, n_nodes, topology='open', _node_slh=None):
     """
     if _node_slh is None:
         _node_slh = double_sided_node.node_slh
-    circuit = network_circuit(n_nodes, topology)
+    if _network_circuit is None:
+        _network_circuit = network_circuit
+    circuit = _network_circuit(n_nodes, topology)
     slh_mapping = {}
     for i in range(n_nodes):
         ind = i + 1  # 1-based indexing of nodes

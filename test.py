@@ -5,6 +5,7 @@ import pytest
 from copy import copy
 from collections import OrderedDict
 import single_sided_network
+import crossed_cavity_network
 import qdyn_model
 import numpy as np
 from sympy import Symbol
@@ -95,7 +96,7 @@ def test_no_feedback_system(model_no_fb, tmpdir):
     * id = 2, filename = pulse2.dat
 
     ham: type = matrix, real_op = F, n_surf = 100, sparsity_model = indexed
-    * filename = H0.dat, op_unit = energy_unit, op_type = potential
+    * filename = H0.dat, op_unit = MHz, op_type = potential
     * filename = H1.dat, op_unit = dimensionless, op_type = dipole, pulse_id = 1
     * filename = H2.dat, op_unit = dimensionless, op_type = dipole, pulse_id = 2
 
@@ -130,7 +131,7 @@ def test_no_feedback_oct_fw_system(model_no_fb_oct_fw, tmpdir):
     * id = 2, filename = pulse2.dat, oct_outfile = pulse2.oct.dat
 
     ham: type = matrix, real_op = F, n_surf = 100, sparsity_model = indexed
-    * filename = H0.dat, op_unit = energy_unit, op_type = potential
+    * filename = H0.dat, op_unit = MHz, op_type = potential
     * filename = H1.dat, op_unit = dimensionless, op_type = dipole, pulse_id = 1
     * filename = H2.dat, op_unit = dimensionless, op_type = dipole, pulse_id = 2
 
@@ -182,7 +183,7 @@ def test_no_feedback_oct_gate_system(model_no_fb_oct_gate, tmpdir):
     * id = 2, filename = pulse2.dat, oct_outfile = pulse2.oct.dat
 
     ham: type = matrix, real_op = F, n_surf = 100, sparsity_model = indexed
-    * filename = H0.dat, op_unit = energy_unit, op_type = potential
+    * filename = H0.dat, op_unit = MHz, op_type = potential
     * filename = H1.dat, op_unit = dimensionless, op_type = dipole, pulse_id = 1
     * filename = H2.dat, op_unit = dimensionless, op_type = dipole, pulse_id = 2
 
@@ -218,6 +219,12 @@ def test_no_feedback_oct_gate_system(model_no_fb_oct_gate, tmpdir):
     gate = QDYN.gate2q.Gate2Q.read(str(tmpdir.join('target_gate.dat')))
     diff = np.abs(QDYN.linalg.vectorize(gate - QDYN.gate2q.sqrt_SWAP))
     assert QDYN.linalg.norm(diff) < 1e-14
+
+
+def test_crossed_cavity_slh():
+    slh = crossed_cavity_network.network_slh(
+        n_cavity=2, n_nodes=2, topology='FB')
+    assert slh.S[0, 0] == 1
 
 
 def test_logical_2q_state():

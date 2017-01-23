@@ -11,6 +11,8 @@ def network_circuit(n_nodes, topology='open'):
 
 def network_slh(n_cavity, n_nodes, topology='open'):
     """See double_sided_network.nework_slh"""
-    return double_sided_network.network_slh(
+    slh = double_sided_network.network_slh(
         n_cavity, n_nodes, topology=topology,
+        _network_circuit=network_circuit,
         _node_slh=crossed_cavity_node.node_slh)
+    return slh
