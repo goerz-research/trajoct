@@ -7,9 +7,12 @@ from collections import OrderedDict
 import shutil
 
 import qutip
+from scipy import sparse
 import QDYN
 from QDYN.units import UnitFloat
+from QDYN.dissipation import lindblad_ops_to_dissipator
 
+from qnet.algebra.operator_algebra import Destroy, Create
 from qnet.convert.to_qutip import convert_to_qutip
 
 from algebra import split_hamiltonian
@@ -83,9 +86,19 @@ def err_state_to_state(target_state, final_states_glob):
     return 1.0 - F/float(n)
 
 
+def H0_eff(H0, Ls):
+    """Return a modified H0 that is the effective non-Hermitian Hamiltonian in
+    an MCWF propagation (or just a non-Hermitian Hilbert space propagation)
+    """
+    for L in Ls:
+        H0 = H0 - 0.5j*(L.dag() * L)
+    return H0
+
+
 def make_qdyn_model(
         network_slh, num_vals, controls, energy_unit='MHz',
-        mcwf=False, non_herm=False, states=None, add_observables=False):
+        mcwf=False, non_herm=False, use_dissipation_superop=True,
+        states=None):
     """Construct a QDYN LevelModel for a two-node network, configured for
     propagation
 
@@ -96,17 +109,31 @@ def make_qdyn_model(
         energy_unit (str): The physical unit of the drift Hamiltonian. The
             Lindbladians must be in units of sqrt-`energy_unit`.
         mcwf (bool): If True, initialize for MCWF propagation. Otherwise,
-            non-dissipative Hilbert space or Liouville space propagation
+            non-dissipative Hilbert space or Liouville space propagation. See
+            below for details.
         non_herm (bool): If True, add the decay term to the Hamiltonian. If
             used together with `mcwf=True`, this improves efficiency slightly.
-            If used with `mwwf=False`, a non-Hermitian Hamiltonian would be
-            propagated
+            If used with `mcwf=False`, a non-Hermitian Hamiltonian will be
+            propagated. See below for details
+        use_dissipation_superop (bool): If True, pre-compute a dissipation
+            superoperator instead of using Lindblad Operators. This only
+            affects density matric propagations (``mcwf=False``,
+            ``non_herm=False``
         states (dict or None): dict label => state (numpy array of amplitudes).
             If None, no state will be added to the model.
-        add_observables (bool): flag whether to add any observables to the
-            config file. Only do this for propagation, not for OCT
 
     Notes:
+
+        The "propagation mode" is determined by the values of `mcwf` and
+        `non_herm`. The following combinations are possible:
+
+        * density matrix propagation: ``mcwf=False``, ``non_herm=False``
+        * non-Hermitian propagation in Hilbert space:
+          ``mcwf=False``, ``non_herm=True``
+        * MCWF propagation with effective Hamiltonian auto-calculated from
+          Lindblad operators in QDYN:
+          ``mcwf=True, ``non_herm=False``
+        * MCWF propagation with pre-computed effective Hamiltonian
 
         The propagation time grid is automatically taken from the control
         pulses.
@@ -122,39 +149,9 @@ def make_qdyn_model(
 
     control_syms = list(controls.keys())
 
-    construct_mcwf_ham = False
-    if mcwf:
-        construct_mcwf_ham = True
-    if non_herm:
-        construct_mcwf_ham = False
-
     H_num = network_slh.H.substitute(num_vals)
     ham_parts = split_hamiltonian(H_num, use_cc=False, controls=control_syms)
     hs = H_num.space
-
-    # drift Hamiltonian and dissipator
-    H0 = (convert_to_qutip(ham_parts['H0'], full_space=hs) +
-          convert_to_qutip(ham_parts['Hint'], full_space=hs))
-
-    L = convert_to_qutip(network_slh.L[0, 0].substitute(num_vals),
-                         full_space=hs)
-
-    model = QDYN.model.LevelModel()
-
-    if non_herm:
-        H0 = H0 - 0.5j*(L.dag() * L)
-    else:
-        model.add_lindblad_op(L, op_unit='sqrt_%s' % energy_unit,
-                              add_to_H_jump='indexed')
-    model.add_ham(H0, op_unit=energy_unit, op_type='potential')
-
-    for i, control_sym in enumerate(control_syms):
-        H_d = convert_to_qutip(
-            ham_parts['Hd_%d' % (i+1)].substitute({control_sym: 1}),
-            full_space=hs)
-        pulse = controls[control_sym]
-        model.add_ham(H_d, pulse=pulse, op_unit='dimensionless',
-                      op_type='dipole')
 
     # time grid (determined by pulses)
     pulses = list(controls.values())
@@ -167,25 +164,97 @@ def make_qdyn_model(
         assert pulse.t0 == t0
         assert pulse.T == T
         assert pulse.time_unit == time_unit
-    model.set_propagation(T=T, nt=nt, t0=t0, time_unit=time_unit,
-                          prop_method='newton', use_mcwf=mcwf, mcwf_order=2,
-                          construct_mcwf_ham=construct_mcwf_ham)
+
+    H0 = (convert_to_qutip(ham_parts['H0'], full_space=hs) +
+          convert_to_qutip(ham_parts['Hint'], full_space=hs))
+
+    Ls = [convert_to_qutip(L.substitute(num_vals), full_space=hs)
+          for L in network_slh.Ls]
+
+    model = QDYN.model.LevelModel()
+
+    # depending on propagation mode, set appropriate drift Hamiltonian,
+    # dissipation and prop settings
+
+    if (mcwf, non_herm) == (False, False):
+
+        # Density matrix propagation
+        model.add_ham(H0, op_unit=energy_unit, op_type='potential')
+        if use_dissipation_superop:
+            D = lindblad_ops_to_dissipator(
+                [sparse.coo_matrix(L.data) for L in Ls])
+            model.set_dissipator(D, op_unit=energy_unit)
+        else:
+            for L in Ls:
+                model.add_lindblad_op(L, op_unit='sqrt_%s' % energy_unit)
+        model.set_propagation(
+            T=T, nt=nt, t0=t0, time_unit=time_unit, prop_method='newton')
+
+    elif (mcwf, non_herm) == (False, True):
+
+        # Propagation in Hilbert space with a non-Hermitian Hamiltonian
+        model.add_ham(H0_eff(H0, Ls), op_unit=energy_unit, op_type='potential')
+        model.set_propagation(
+            T=T, nt=nt, t0=t0, time_unit=time_unit, prop_method='newton')
+
+    elif mcwf:
+
+        # MCWF propagation
+        for L in Ls:
+            model.add_lindblad_op(L, op_unit='sqrt_%s' % energy_unit,
+                                  add_to_H_jump='indexed')
+        if non_herm:
+            # We precompute the effective Hamiltonian
+            model.add_ham(H0_eff(H0, Ls), op_unit=energy_unit,
+                          op_type='potential')
+            model.set_propagation(
+                T=T, nt=nt, t0=t0, time_unit=time_unit, prop_method='newton',
+                use_mcwf=True, mcwf_order=2, construct_mcwf_ham=False)
+        else:
+            # QDYN determines the effective Hamiltonian internally
+            model.add_ham(H0, op_unit=energy_unit, op_type='potential')
+            model.set_propagation(
+                T=T, nt=nt, t0=t0, time_unit=time_unit, prop_method='newton',
+                use_mcwf=True, mcwf_order=2, construct_mcwf_ham=True)
+
+    # control Hamiltonians
+    for i, control_sym in enumerate(control_syms):
+        H_d = convert_to_qutip(
+            ham_parts['Hd_%d' % (i+1)].substitute({control_sym: 1}),
+            full_space=hs)
+        pulse = controls[control_sym]
+        model.add_ham(H_d, pulse=pulse, op_unit='dimensionless',
+                      op_type='dipole')
+
+    # states
     if states is not None:
         for label, psi in states.items():
             assert psi.shape[0] == H0.shape[0]
             model.add_state(psi, label)
 
-    if add_observables:
+    # observables
+    L_total = Ls[0].dag() * Ls[0]
+    for L in Ls[1:]:
+        L_total += L.dag() * L
+    model.add_observable(
+        L_total, outfile='darkstate_cond.dat', exp_unit=energy_unit,
+        time_unit='microsec', col_label='<L^+L>', is_real=True)
+    for (i, j) in [(0, 0), (0, 1), (1, 0), (1, 1)]:
+        ket = logical_2q_state(hs, i, j)
+        rho = ket * ket.dag()
         model.add_observable(
-            L.dag()*L, outfile='darkstate_cond.dat', exp_unit='dimensionless',
-            time_unit='microsec', col_label='<L^+L>', is_real=True)
-        for (i, j) in [(0, 0), (0, 1), (1, 0), (1, 1)]:
-            ket = logical_2q_state(hs, i, j)
-            rho = ket * ket.dag()
-            model.add_observable(
-                rho, outfile='qubit_pop.dat', exp_unit='dimensionless',
-                time_unit='microsec', col_label='P(%d%d)' % (i, j),
-                is_real=True)
+            rho, outfile='qubit_pop.dat', exp_unit='dimensionless',
+            time_unit='microsec', col_label='P(%d%d)' % (i, j),
+            is_real=True)
+    rho = logical_2q_state(hs, 1, 0) * logical_2q_state(hs, 0, 1).dag()
+    model.add_observable(
+        rho, outfile='10_01_coherence.dat', exp_unit='dimensionless',
+        time_unit='microsec', col_label='|10><01|', is_real=False)
+    for ls in hs.local_factors:
+        n_op = convert_to_qutip(Create(hs=ls) * Destroy(hs=ls), full_space=hs)
+        model.add_observable(
+            n_op, outfile='excitation.dat', exp_unit='dimensionless',
+            time_unit='microsec', col_label=ls.label, is_real=True)
 
     model.user_data['time_unit'] = time_unit
     model.user_data['write_jump_record'] = 'jump_record.dat'
@@ -195,7 +264,8 @@ def make_qdyn_model(
 
 def make_qdyn_oct_model(
         network_slh, num_vals, controls, *, oct_target, energy_unit='MHz',
-        mcwf=False, non_herm=False, lambda_a=1e-5, seed=None, **kwargs):
+        mcwf=False, non_herm=False, use_dissipation_superop=True,
+        lambda_a=1e-5, seed=None, **kwargs):
     """Construct a QDYN level model for OCT"""
     hs = network_slh.H.space
     psi00 = logical_2q_state(hs, 0, 0)
@@ -207,7 +277,8 @@ def make_qdyn_oct_model(
 
     model = make_qdyn_model(
         network_slh, num_vals, controls, energy_unit=energy_unit, mcwf=mcwf,
-        non_herm=non_herm, states=states)
+        non_herm=non_herm, use_dissipation_superop=use_dissipation_superop,
+        states=states)
 
     pulse_settings = {}
     for i, pulse in enumerate(model.pulses()):
