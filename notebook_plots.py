@@ -1,5 +1,6 @@
 """Plotting routines for inside the notebook"""
 from os.path import join
+from glob import glob
 
 import matplotlib.pylab as plt
 import numpy as np
@@ -11,47 +12,54 @@ import QDYN
 from algebra import split_hamiltonian
 
 
-def show_observables(rf, logical_pops_file='qubit_pop.dat',
-        beta_pops_file='beta_pop.dat', exc_file='cavity_excitation.dat',
-        pulse1_file='pulse1.dat', pulse2_file='pulse2.dat'):
+def show_summary(rf, pulses='pulse*.oct.dat'):
     """Show plot of observables"""
-    fig = plt.figure(figsize=(16,3.5), dpi=70)
-
-    qubit_pop = np.genfromtxt(join(rf, logical_pops_file)).transpose()
-    beta_pop = np.genfromtxt(join(rf, beta_pops_file)).transpose()
-    exc = np.genfromtxt(join(rf, exc_file)).transpose()
-    p1 = QDYN.pulse.Pulse.read(join(rf, pulse1_file))
-    p2 = QDYN.pulse.Pulse.read(join(rf, pulse2_file))
+    fig = plt.figure(figsize=(16, 3.5), dpi=70)
 
     ax = fig.add_subplot(131)
-    tgrid = qubit_pop[0] # microsecond
+    render_population(ax, rf)
+
+    ax = fig.add_subplot(132)
+    render_excitation(ax, rf)
+
+    ax = fig.add_subplot(133)
+    render_pulses(ax, rf, pulses)
+    plt.show(fig)
+
+
+def render_pulses(ax, rf, pulses='pulse*.oct.dat'):
+    for i, pulse_file in enumerate(sorted(glob(join(rf, pulses)))):
+        p = QDYN.pulse.Pulse.read(pulse_file)
+        p.render_pulse(ax, label='pulse %d' % (i+1))
+    ax.legend()
+
+
+def render_population(ax, rf):
+    qubit_pop = np.genfromtxt(join(rf, 'qubit_pop.dat')).transpose()
+    tgrid = qubit_pop[0]  # microsecond
     ax.plot(tgrid, qubit_pop[1], label=r'00')
     ax.plot(tgrid, qubit_pop[2], label=r'01')
     ax.plot(tgrid, qubit_pop[3], label=r'10')
     ax.plot(tgrid, qubit_pop[4], label=r'11')
-    ax.plot(tgrid, beta_pop[1], label=r'0010')
-    ax.plot(tgrid, beta_pop[2], label=r'0001')
-    analytical_pop = qubit_pop[1] + qubit_pop[2] + qubit_pop[3] \
-                     + beta_pop[1] + beta_pop[2]
-    ax.plot(tgrid, analytical_pop, label=r'ana. subsp.')
+    total = qubit_pop[1] + qubit_pop[2] + qubit_pop[3] + qubit_pop[4]
+    ax.plot(tgrid, total, label=r'total')
     ax.legend(loc='best', fancybox=True, framealpha=0.5)
     ax.set_xlabel("time (microsecond)")
     ax.set_ylabel("population")
 
-    ax = fig.add_subplot(132)
-    ax.plot(tgrid, exc[1], label=r'<n> (cav 1)')
-    ax.plot(tgrid, exc[2], label=r'<n> (cav 2)')
-    ax.plot(tgrid, exc[3], label=r'<L>')
+
+def render_excitation(ax, rf):
+    exc_file = join(rf, 'excitation.dat')
+    with open(exc_file) as in_fh:
+        header = in_fh.readline()
+        labels = header.strip('#').strip().split()[2:]
+    excitation = np.genfromtxt(exc_file).transpose()
+    tgrid = excitation[0]  # microsecond
+    for i, label in enumerate(labels):
+        ax.plot(tgrid, excitation[i+1], label=label)
     ax.legend(loc='best', fancybox=True, framealpha=0.5)
     ax.set_xlabel("time (microsecond)")
-    ax.set_ylabel("cavity excitation")
-
-    ax = fig.add_subplot(133)
-    p1.render_pulse(ax, label='pulse 1')
-    p2.render_pulse(ax, label='pulse 2')
-    ax.legend(loc='best', fancybox=True, framealpha=0.5)
-
-    #ax.set_xlim(-4, -1)
+    ax.set_ylabel("excitation")
 
 
 def display_with_cc(expr):
