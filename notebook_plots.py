@@ -17,13 +17,23 @@ def show_summary(rf, pulses='pulse*.oct.dat'):
     fig = plt.figure(figsize=(16, 3.5), dpi=70)
 
     ax = fig.add_subplot(131)
-    render_population(ax, rf)
+    try:
+        render_population(ax, rf)
+    except OSError:
+        pass
 
     ax = fig.add_subplot(132)
-    render_excitation(ax, rf)
+    try:
+        render_excitation(ax, rf)
+    except OSError:
+        pass
 
     ax = fig.add_subplot(133)
-    render_pulses(ax, rf, pulses)
+    try:
+        render_pulses(ax, rf, pulses)
+    except OSError:
+        pass
+
     plt.show(fig)
 
 
@@ -42,8 +52,9 @@ def render_population(ax, rf):
     ax.plot(tgrid, qubit_pop[3], label=r'10')
     ax.plot(tgrid, qubit_pop[4], label=r'11')
     total = qubit_pop[1] + qubit_pop[2] + qubit_pop[3] + qubit_pop[4]
-    ax.plot(tgrid, total, label=r'total')
+    ax.plot(tgrid, total, label=r'total', ls='--')
     ax.legend(loc='best', fancybox=True, framealpha=0.5)
+    ax.set_ylim([0, 1.1])
     ax.set_xlabel("time (microsecond)")
     ax.set_ylabel("population")
 
@@ -55,9 +66,13 @@ def render_excitation(ax, rf):
         labels = header.strip('#').strip().split()[2:]
     excitation = np.genfromtxt(exc_file).transpose()
     tgrid = excitation[0]  # microsecond
+    total = np.zeros(len(tgrid))
     for i, label in enumerate(labels):
+        total += excitation[i+1]
         ax.plot(tgrid, excitation[i+1], label=label)
+    ax.plot(tgrid, total, ls='--', label='total')
     ax.legend(loc='best', fancybox=True, framealpha=0.5)
+    ax.set_ylim([0, max(1.0, 1.05*ax.get_ylim()[1])])
     ax.set_xlabel("time (microsecond)")
     ax.set_ylabel("excitation")
 
