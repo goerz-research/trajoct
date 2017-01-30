@@ -236,9 +236,10 @@ def make_qdyn_model(
     L_total = Ls[0].dag() * Ls[0]
     for L in Ls[1:]:
         L_total += L.dag() * L
-    model.add_observable(
-        L_total, outfile='darkstate_cond.dat', exp_unit=energy_unit,
-        time_unit='microsec', col_label='<L^+L>', is_real=True)
+    if L_total.norm() > 1e-14:
+        model.add_observable(
+            L_total, outfile='darkstate_cond.dat', exp_unit=energy_unit,
+            time_unit='microsec', col_label='<L^+L>', is_real=True)
     for (i, j) in [(0, 0), (0, 1), (1, 0), (1, 1)]:
         ket = logical_2q_state(hs, i, j)
         rho = ket * ket.dag()
