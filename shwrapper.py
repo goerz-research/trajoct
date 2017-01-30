@@ -1,6 +1,7 @@
 """Wrappers for command lines tools"""
 import os
 import subprocess
+import shutil
 
 def env(**kwargs):
     """Return a modified shell environement"""
@@ -50,3 +51,17 @@ qdyn_prop_traj = make_sh_cmd(
 
 qdyn_check_config = make_sh_cmd(
         ['qdyn_check_config',])
+
+
+def copy_rf_for_gate_prop(rf, guess=False):
+    postfix = '_prop_'
+    if rf.endswith("/"):
+        rf = rf[:-1]
+    if guess:
+        postfix = '_prop_guess_'
+    for state in ['00', '01', '10', '11']:
+        rf_copy = rf + postfix + state
+        try:
+            shutil.copytree(rf, rf_copy)
+        except OSError:
+            pass
