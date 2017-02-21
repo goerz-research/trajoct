@@ -202,7 +202,8 @@ def make_qdyn_model(
         # MCWF propagation
         for L in Ls:
             model.add_lindblad_op(L, op_unit='sqrt_%s' % energy_unit,
-                                  add_to_H_jump='indexed')
+                                  add_to_H_jump='indexed',
+                                  conv_to_superop=False)
         if non_herm:
             # We precompute the effective Hamiltonian
             model.add_ham(H0_eff(H0, Ls), op_unit=energy_unit,
@@ -316,7 +317,7 @@ def make_qdyn_oct_model(
     elif oct_target == 'excitation_transfer_bw':
         model.user_data['initial_states'] = '01'
         model.user_data['target_states'] = '10'
-    elif oct_target == 'sqrt_SWAP':
+    elif oct_target == 'gate':
         model.user_data['basis'] = '00,01,10,11'
         model.user_data['gate'] = 'target_gate.dat'
     else:
