@@ -297,7 +297,7 @@ def make_qdyn_oct_model(
     psi01 = logical_2q_state(hs, 0, 1)
     psi10 = logical_2q_state(hs, 1, 0)
     psi11 = logical_2q_state(hs, 1, 1)
-    dicke = (psi01 + psi10) / np.sqrt(2)
+    dicke = dicke1_state(hs)
     states = OrderedDict([('00', psi00), ('01', psi01), ('10', psi10),
                           ('11', psi11), ('dicke', dicke)])
 
@@ -340,7 +340,7 @@ def make_qdyn_oct_model(
         model.user_data['target_states'] = '01'
     elif oct_target == 'dicke':
         model.user_data['initial_states'] = '10'
-        model.user_data['target_states'] = dicke1_state(hs)
+        model.user_data['target_states'] = 'dicke'
     elif oct_target == 'excitation_transfer_bw':
         model.user_data['initial_states'] = '01'
         model.user_data['target_states'] = '10'
