@@ -11,7 +11,7 @@ import numpy as np
 from sympy import Symbol
 import QDYN
 from QDYN.pulse import blackman
-
+from qnet.algebra.hilbert_space_algebra import LocalSpace, ProductSpace
 
 
 @pytest.fixture
@@ -78,7 +78,7 @@ def model_no_fb_oct_gate(num_vals_no_fb, controls_no_fb):
         n_cavity=5, n_nodes=2, topology='open')
     model = qdyn_model.make_qdyn_oct_model(
         slh, num_vals, controls, energy_unit='MHz',
-        mcwf=False, non_herm=False, oct_target='sqrt_SWAP')
+        mcwf=False, non_herm=False, oct_target='gate')
     return model
 
 
@@ -101,8 +101,39 @@ def test_no_feedback_system(model_no_fb, tmpdir):
     * filename = H2.dat, op_unit = dimensionless, op_type = dipole, pulse_id = 2
 
     dissipator:
-    * type = lindblad_ops, filename = L1.dat, real_op = F, op_unit = sqrt_MHz, &
+    * type = dissipator, filename = D1.dat, real_op = F, op_unit = MHz, &
       sparsity_model = indexed
+
+    observables: type = matrix, real_op = F, n_surf = 100, time_unit = microsec
+    * filename = O1.dat, outfile = darkstate_cond.dat, exp_unit = MHz, &
+      is_real = T, column_label = <L^+L>, op_unit = MHz, sparsity_model = indexed
+    * filename = O2.dat, outfile = qubit_pop.dat, exp_unit = dimensionless, &
+      is_real = T, column_label = P(00), op_unit = dimensionless, &
+      sparsity_model = indexed
+    * filename = O3.dat, outfile = qubit_pop.dat, exp_unit = dimensionless, &
+      is_real = T, column_label = P(01), op_unit = dimensionless, &
+      sparsity_model = indexed
+    * filename = O4.dat, outfile = qubit_pop.dat, exp_unit = dimensionless, &
+      is_real = T, column_label = P(10), op_unit = dimensionless, &
+      sparsity_model = indexed
+    * filename = O5.dat, outfile = qubit_pop.dat, exp_unit = dimensionless, &
+      is_real = T, column_label = P(11), op_unit = dimensionless, &
+      sparsity_model = indexed
+    * filename = O6.dat, outfile = 10_01_coherence.dat, exp_unit = dimensionless, &
+      is_real = F, column_label = |10><01|, op_unit = dimensionless, &
+      sparsity_model = indexed
+    * filename = O7.dat, outfile = excitation.dat, exp_unit = dimensionless, &
+      is_real = T, column_label = q1, op_unit = dimensionless, &
+      sparsity_model = banded
+    * filename = O8.dat, outfile = excitation.dat, exp_unit = dimensionless, &
+      is_real = T, column_label = c1, op_unit = dimensionless, &
+      sparsity_model = banded
+    * filename = O9.dat, outfile = excitation.dat, exp_unit = dimensionless, &
+      is_real = T, column_label = q2, op_unit = dimensionless, &
+      sparsity_model = banded
+    * filename = O10.dat, outfile = excitation.dat, exp_unit = dimensionless, &
+      is_real = T, column_label = c2, op_unit = dimensionless, &
+      sparsity_model = banded
 
     user_strings: time_unit = microsec, write_jump_record = jump_record.dat, &
       write_final_state = psi_final.dat
@@ -136,8 +167,39 @@ def test_no_feedback_oct_fw_system(model_no_fb_oct_fw, tmpdir):
     * filename = H2.dat, op_unit = dimensionless, op_type = dipole, pulse_id = 2
 
     dissipator:
-    * type = lindblad_ops, filename = L1.dat, real_op = F, op_unit = sqrt_MHz, &
+    * type = dissipator, filename = D1.dat, real_op = F, op_unit = MHz, &
       sparsity_model = indexed
+
+    observables: type = matrix, real_op = F, n_surf = 100, time_unit = microsec
+    * filename = O1.dat, outfile = darkstate_cond.dat, exp_unit = MHz, &
+      is_real = T, column_label = <L^+L>, op_unit = MHz, sparsity_model = indexed
+    * filename = O2.dat, outfile = qubit_pop.dat, exp_unit = dimensionless, &
+      is_real = T, column_label = P(00), op_unit = dimensionless, &
+      sparsity_model = indexed
+    * filename = O3.dat, outfile = qubit_pop.dat, exp_unit = dimensionless, &
+      is_real = T, column_label = P(01), op_unit = dimensionless, &
+      sparsity_model = indexed
+    * filename = O4.dat, outfile = qubit_pop.dat, exp_unit = dimensionless, &
+      is_real = T, column_label = P(10), op_unit = dimensionless, &
+      sparsity_model = indexed
+    * filename = O5.dat, outfile = qubit_pop.dat, exp_unit = dimensionless, &
+      is_real = T, column_label = P(11), op_unit = dimensionless, &
+      sparsity_model = indexed
+    * filename = O6.dat, outfile = 10_01_coherence.dat, exp_unit = dimensionless, &
+      is_real = F, column_label = |10><01|, op_unit = dimensionless, &
+      sparsity_model = indexed
+    * filename = O7.dat, outfile = excitation.dat, exp_unit = dimensionless, &
+      is_real = T, column_label = q1, op_unit = dimensionless, &
+      sparsity_model = banded
+    * filename = O8.dat, outfile = excitation.dat, exp_unit = dimensionless, &
+      is_real = T, column_label = c1, op_unit = dimensionless, &
+      sparsity_model = banded
+    * filename = O9.dat, outfile = excitation.dat, exp_unit = dimensionless, &
+      is_real = T, column_label = q2, op_unit = dimensionless, &
+      sparsity_model = banded
+    * filename = O10.dat, outfile = excitation.dat, exp_unit = dimensionless, &
+      is_real = T, column_label = c2, op_unit = dimensionless, &
+      sparsity_model = banded
 
     psi:
     * type = file, filename = psi_00.dat, label = 00
@@ -150,6 +212,9 @@ def test_no_feedback_oct_fw_system(model_no_fb_oct_fw, tmpdir):
 
     psi:
     * type = file, filename = psi_11.dat, label = 11
+
+    psi:
+    * type = file, filename = psi_dicke.dat, label = dicke
 
     oct: method = krotovpk, J_T_conv = 0.0001, max_ram_mb = 100000, &
       iter_dat = oct_iters.dat, iter_stop = 100, keep_pulses = all, &
@@ -188,8 +253,39 @@ def test_no_feedback_oct_gate_system(model_no_fb_oct_gate, tmpdir):
     * filename = H2.dat, op_unit = dimensionless, op_type = dipole, pulse_id = 2
 
     dissipator:
-    * type = lindblad_ops, filename = L1.dat, real_op = F, op_unit = sqrt_MHz, &
+    * type = dissipator, filename = D1.dat, real_op = F, op_unit = MHz, &
       sparsity_model = indexed
+
+    observables: type = matrix, real_op = F, n_surf = 100, time_unit = microsec
+    * filename = O1.dat, outfile = darkstate_cond.dat, exp_unit = MHz, &
+      is_real = T, column_label = <L^+L>, op_unit = MHz, sparsity_model = indexed
+    * filename = O2.dat, outfile = qubit_pop.dat, exp_unit = dimensionless, &
+      is_real = T, column_label = P(00), op_unit = dimensionless, &
+      sparsity_model = indexed
+    * filename = O3.dat, outfile = qubit_pop.dat, exp_unit = dimensionless, &
+      is_real = T, column_label = P(01), op_unit = dimensionless, &
+      sparsity_model = indexed
+    * filename = O4.dat, outfile = qubit_pop.dat, exp_unit = dimensionless, &
+      is_real = T, column_label = P(10), op_unit = dimensionless, &
+      sparsity_model = indexed
+    * filename = O5.dat, outfile = qubit_pop.dat, exp_unit = dimensionless, &
+      is_real = T, column_label = P(11), op_unit = dimensionless, &
+      sparsity_model = indexed
+    * filename = O6.dat, outfile = 10_01_coherence.dat, exp_unit = dimensionless, &
+      is_real = F, column_label = |10><01|, op_unit = dimensionless, &
+      sparsity_model = indexed
+    * filename = O7.dat, outfile = excitation.dat, exp_unit = dimensionless, &
+      is_real = T, column_label = q1, op_unit = dimensionless, &
+      sparsity_model = banded
+    * filename = O8.dat, outfile = excitation.dat, exp_unit = dimensionless, &
+      is_real = T, column_label = c1, op_unit = dimensionless, &
+      sparsity_model = banded
+    * filename = O9.dat, outfile = excitation.dat, exp_unit = dimensionless, &
+      is_real = T, column_label = q2, op_unit = dimensionless, &
+      sparsity_model = banded
+    * filename = O10.dat, outfile = excitation.dat, exp_unit = dimensionless, &
+      is_real = T, column_label = c2, op_unit = dimensionless, &
+      sparsity_model = banded
 
     psi:
     * type = file, filename = psi_00.dat, label = 00
@@ -202,6 +298,9 @@ def test_no_feedback_oct_gate_system(model_no_fb_oct_gate, tmpdir):
 
     psi:
     * type = file, filename = psi_11.dat, label = 11
+
+    psi:
+    * type = file, filename = psi_dicke.dat, label = dicke
 
     oct: method = krotovpk, J_T_conv = 0.0001, max_ram_mb = 100000, &
       iter_dat = oct_iters.dat, iter_stop = 100, keep_pulses = all, &
@@ -240,3 +339,15 @@ def test_logical_2q_state():
     assert logical_2q_state(hs, 0, 1) == state(hs, 0, 0, 1, 0)
     assert logical_2q_state(hs, 1, 0) == state(hs, 1, 0, 0, 0)
     assert logical_2q_state(hs, 1, 1) == state(hs, 1, 0, 1, 0)
+
+
+def test_dicke1_state():
+    """Test the creation of the Dicke state"""
+    hs = ProductSpace(
+          LocalSpace('q1', dimension=2), LocalSpace('c1', dimension=2),
+          LocalSpace('q2', dimension=2), LocalSpace('c2', dimension=2),
+          LocalSpace('q3', dimension=2), LocalSpace('c3', dimension=2))
+    dicke_state = (qdyn_model.state(hs, 0, 0, 0, 0, 1, 0) +
+                   qdyn_model.state(hs, 0, 0, 1, 0, 0, 0) +
+                   qdyn_model.state(hs, 1, 0, 0, 0, 0, 0)) / np.sqrt(3)
+    assert (qdyn_model.dicke1_state(hs) - dicke_state).norm() < 1e-12

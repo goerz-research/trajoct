@@ -9,6 +9,7 @@ import shutil
 import qutip
 from scipy import sparse
 import QDYN
+import numpy as np
 from QDYN.units import UnitFloat
 from QDYN.dissipation import lindblad_ops_to_dissipator
 
@@ -63,6 +64,28 @@ def logical_2q_state(space, i, j, fmt='qutip'):
             qnums.append(0)
     assert found_q1 and found_q2
     return state(space, *qnums, fmt=fmt)
+
+
+def dicke1_state(space, fmt='qutip'):
+    """Return the single-excitation dicke state for the given system. Assumes
+    that the Hilbert spaces for the qubits at the different nodes are labeled
+    'q1', 'q2', ...
+
+    For example for a Hilbert space ``('q1', 'c1', 'q2', 'c2', 'q3', 'c3')``,
+    the Dicke state is ``(|000010> + |001000> + |100000>) / sqrt(3)``
+    """
+    dicke_state = None
+    labels = [ls.label for ls in space.local_factors]
+    n = len(labels)
+    n_nodes = len([l for l in labels if l.startswith('q')])
+    for i_node in range(n_nodes):
+        label = 'q%d' % (i_node + 1)
+        qnums = [1 if l == label else 0 for l in labels]
+        if dicke_state is None:
+            dicke_state = state(space, *qnums, fmt=fmt)
+        else:
+            dicke_state += state(space, *qnums, fmt=fmt)
+    return dicke_state / np.sqrt(n_nodes)
 
 
 def err_state_to_state(target_state, final_states_glob):
@@ -274,8 +297,9 @@ def make_qdyn_oct_model(
     psi01 = logical_2q_state(hs, 0, 1)
     psi10 = logical_2q_state(hs, 1, 0)
     psi11 = logical_2q_state(hs, 1, 1)
+    dicke = (psi01 + psi10) / np.sqrt(2)
     states = OrderedDict([('00', psi00), ('01', psi01), ('10', psi10),
-                          ('11', psi11)])
+                          ('11', psi11), ('dicke', dicke)])
 
     model = make_qdyn_model(
         network_slh, num_vals, controls, energy_unit=energy_unit, mcwf=mcwf,
@@ -314,6 +338,9 @@ def make_qdyn_oct_model(
     if oct_target == 'excitation_transfer_fw':
         model.user_data['initial_states'] = '10'
         model.user_data['target_states'] = '01'
+    elif oct_target == 'dicke':
+        model.user_data['initial_states'] = '10'
+        model.user_data['target_states'] = dicke1_state(hs)
     elif oct_target == 'excitation_transfer_bw':
         model.user_data['initial_states'] = '01'
         model.user_data['target_states'] = '10'
