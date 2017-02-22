@@ -1,9 +1,11 @@
 """Plotting routines for inside the notebook"""
 from os.path import join
 from glob import glob
+from collections import OrderedDict
 
 import matplotlib.pylab as plt
 import numpy as np
+import pandas as pd
 from IPython.display import display, Latex
 from qnet.printing import tex
 
@@ -109,3 +111,42 @@ def display_hamiltonian(H):
         lines.append(r'  %s &= %s\\' % (label(name), tex(H)))
     lines.append(r'\end{align}')
     display(Latex("\n".join(lines)))
+
+
+def get_weyl_table(U_of_t_dat):
+    """Get a table of time, concurrence, loss, and weyl coordinates from the
+    gates written out by the oct_prop_gate utility"""
+    tgrid = np.genfromtxt(U_of_t_dat, usecols=(0, ))
+    concurrence = []
+    loss = []
+    c1s = []
+    c2s = []
+    c3s = []
+    for U in QDYN.prop_gate.get_prop_gate_of_t(U_of_t_dat):
+        U_closest_unitary = U.closest_unitary()
+        concurrence.append(U_closest_unitary.concurrence())
+        loss.append(U.pop_loss())
+        c1, c2, c3 = U_closest_unitary.weyl_coordinates()
+        c1s.append(c1)
+        c2s.append(c2)
+        c3s.append(c3)
+    return pd.DataFrame(data=OrderedDict([
+        ('t [microsec]', tgrid),
+        ('concurrence', concurrence),
+        ('loss', loss),
+        ('c1', c1s),
+        ('c2', c1s),
+        ('c3', c3s),
+    ]))
+
+
+def get_weyl_chamber(U_of_t_dat, range=None):
+    w = QDYN.weyl.WeylChamber()
+    w.fig_width = 20
+    w.fig_height = 15
+    if range is not None:
+        i_min, i_max = range
+    for i, U in enumerate(QDYN.prop_gate.get_prop_gate_of_t(U_of_t_dat)):
+        if range is None or (i > i_min and i < i_max):
+            w.add_gate(U.closest_unitary())
+    return w
