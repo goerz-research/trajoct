@@ -39,6 +39,25 @@ def show_summary(rf, pulses='pulse*.oct.dat'):
     plt.show(fig)
 
 
+def show_dicke_summary(rf, pulses='pulse*.oct.dat'):
+    """Show plot of observables"""
+    fig = plt.figure(figsize=(16, 3.5), dpi=70)
+
+    ax = fig.add_subplot(121)
+    try:
+        render_excitation(ax, rf, atoms_only=True)
+    except OSError:
+        pass
+
+    ax = fig.add_subplot(122)
+    try:
+        render_pulses(ax, rf, pulses)
+    except OSError:
+        pass
+
+    plt.show(fig)
+
+
 def render_pulses(ax, rf, pulses='pulse*.oct.dat'):
     for i, pulse_file in enumerate(sorted(glob(join(rf, pulses)))):
         p = QDYN.pulse.Pulse.read(pulse_file)
@@ -61,7 +80,7 @@ def render_population(ax, rf):
     ax.set_ylabel("population")
 
 
-def render_excitation(ax, rf):
+def render_excitation(ax, rf, atoms_only=False):
     exc_file = join(rf, 'excitation.dat')
     with open(exc_file) as in_fh:
         header = in_fh.readline()
@@ -69,9 +88,15 @@ def render_excitation(ax, rf):
     excitation = np.genfromtxt(exc_file).transpose()
     tgrid = excitation[0]  # microsecond
     total = np.zeros(len(tgrid))
+    accept = lambda label: True
+    render_label = lambda label: label
+    if atoms_only:
+        accept = lambda label: label.startswith('q')
+        rener_label = lambda label: label[1:]
     for i, label in enumerate(labels):
         total += excitation[i+1]
-        ax.plot(tgrid, excitation[i+1], label=label)
+        if accept(label):
+            ax.plot(tgrid, excitation[i+1], label=render_label(label))
     ax.plot(tgrid, total, ls='--', label='total')
     ax.legend(loc='best', fancybox=True, framealpha=0.5)
     ax.set_ylim([0, max(1.0, 1.05*ax.get_ylim()[1])])
