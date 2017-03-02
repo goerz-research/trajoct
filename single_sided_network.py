@@ -4,6 +4,7 @@ from sympy import symbols
 from qnet.algebra.circuit_algebra import (
     connect, CircuitSymbol, SLH)
 from qnet.circuit_components.beamsplitter_cc import Beamsplitter
+from qnet.circuit_components.displace_cc import Displace
 
 import single_sided_node
 
@@ -15,7 +16,7 @@ def node_symbol(node_index):
 
 def network_circuit(n_nodes, topology='open'):
     """Construct the network with the given topology"""
-    if topology not in ['open', 'bs_fb']:
+    if topology not in ['open', 'bs_fb', 'driven_bs_fb', 'driven_open']:
         raise ValueError("Unknown topology: %s" % topology)
     nodes = []
     connections = []
@@ -27,11 +28,21 @@ def network_circuit(n_nodes, topology='open'):
         if prev_node is not None:
             connections.append(((prev_node, 0), (cur_node, 0)))
         prev_node = cur_node
-    if topology == 'bs_fb':
+    if 'bs_fb' in topology:
         BS = Beamsplitter('BS', theta=symbols('theta', real=True))
         nodes.append(BS)
         connections.append(((prev_node, 0), (BS, 0)))
         connections.append(((BS, 1), (nodes[0], 0)))
+        if 'driven' in topology:
+            W = Displace('W', alpha=symbols('Omega_a'))
+            nodes.append(W)
+            connections.append(((W, 0), (BS, 1)))
+    else: # open topology
+        if 'driven' in topology:  # driven_open
+            W = Displace('W', alpha=symbols('Omega_a'))
+            nodes.append(W)
+            connections.append(((W, 0), (nodes[0], 0)))
+
     circuit = connect(nodes, connections, force_SLH=False)
     return circuit
 
