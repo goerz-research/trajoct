@@ -12,6 +12,7 @@ import QDYN
 import numpy as np
 from QDYN.units import UnitFloat
 from QDYN.dissipation import lindblad_ops_to_dissipator
+from QDYN.linalg import triu, tril
 
 from qnet.algebra.operator_algebra import Destroy, Create
 from qnet.convert.to_qutip import convert_to_qutip
@@ -247,8 +248,18 @@ def make_qdyn_model(
             ham_parts['Hd_%d' % (i+1)].substitute({control_sym: 1}),
             full_space=hs)
         pulse = controls[control_sym]
-        model.add_ham(H_d, pulse=pulse, op_unit='dimensionless',
-                      op_type='dipole')
+        if pulse.is_complex:
+            assert pulse.mode == 'complex'
+        if pulse.mode == 'complex':
+            H_d_u = qutip.Qobj(triu(H_d))
+            H_d_l = qutip.Qobj(tril(H_d))
+            model.add_ham(H_d_u, pulse=pulse, op_unit='dimensionless',
+                          op_type='dipole')
+            model.add_ham(H_d_l, pulse=pulse, op_unit='dimensionless',
+                          op_type='dipole', conjg_pulse=True)
+        else:
+            model.add_ham(H_d, pulse=pulse, op_unit='dimensionless',
+                        op_type='dipole')
 
     # states
     if states is not None:
