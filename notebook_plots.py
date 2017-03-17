@@ -6,8 +6,11 @@ from collections import OrderedDict
 import matplotlib.pylab as plt
 import numpy as np
 import pandas as pd
+import sympy
+from sympy import Symbol
 from IPython.display import display, Latex
 from qnet.printing import tex
+from qnet.algebra import pattern, wc, ScalarTimesOperator
 
 import QDYN
 
@@ -186,3 +189,25 @@ def get_weyl_chamber(U_of_t_dat, range=None):
         if range is None or (i > i_min and i < i_max):
             w.add_gate(U.closest_unitary())
     return w
+
+
+def plot_bs_decay(L):
+    """Under the assumption that `L` is a sum of operator with identical
+    prefactors, plot that common prefactor in dependence of the symbol theta,
+    in units of the symbol sqrt(2*kappa)
+    """
+    θ = Symbol('theta', real=True)
+    κ = Symbol('kappa', positive=True)
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    theta = np.linspace(0, 2*np.pi, 100)
+    cs = [op.coeff for op in pattern(ScalarTimesOperator).findall(L)]
+    for c in cs[1:]:
+        assert c == cs[0]
+    c = cs[0] / sympy.sqrt(2*κ)
+    k = np.array([c.subs({θ: val}) for val in theta])
+    ax.plot(theta/np.pi, k)
+    ax.set_ylim(-3, 3)
+    ax.set_xlabel(r'BS mixing angle $\theta$ ($\pi$ rad)')
+    ax.set_ylabel(r'decay rate (\sqrt(2\kappa)')
+    plt.show(fig)
