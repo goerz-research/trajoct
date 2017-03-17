@@ -15,6 +15,7 @@ from QDYN.dissipation import lindblad_ops_to_dissipator
 from QDYN.linalg import triu, tril
 
 from qnet.algebra.operator_algebra import Destroy, Create
+from qnet.algebra.circuit_algebra import move_drive_to_H
 from qnet.convert.to_qutip import convert_to_qutip
 
 from algebra import split_hamiltonian
@@ -49,21 +50,42 @@ def state(space, *numbers, fmt='qutip'):
 
 
 def logical_2q_state(space, i, j, fmt='qutip'):
-    """Return logical two-qubit state |ij>"""
+    """Return logical two-qubit state |ij>, defined accross the first and last
+    node, under the (checked) assumption that the qubit Hilbert spaces are
+    labeled as "q<i>" where <i> is the (1-based) index of the nodes
+    """
     assert i in [0, 1] and j in [0, 1]
     qnums = []
     found_q1 = False
+    found_qn = False
+    n_nodes = len([ls.label for ls in space.local_factors
+                   if ls.label.startswith('q')])
+    qn_label = 'q%d' % n_nodes
+    for ls in space.local_factors:
+        if ls.label == 'q1':
+            qnums.append(i)
+            found_q1 = True
+        elif ls.label == qn_label:
+            qnums.append(j)
+            found_qn = True
+        else:
+            qnums.append(0)
+    assert found_q1 and found_qn
+    return state(space, *qnums, fmt=fmt)
+
+
+def logical_1q_state(space, i, fmt='qutip'):
+    """Return logical single-qubit state |i> on space 'q1'"""
+    assert i in [0, 1]
+    qnums = []
     found_q1 = False
     for ls in space.local_factors:
         if ls.label == 'q1':
             qnums.append(i)
             found_q1 = True
-        elif ls.label == 'q2':
-            qnums.append(j)
-            found_q2 = True
         else:
             qnums.append(0)
-    assert found_q1 and found_q2
+    assert found_q1
     return state(space, *qnums, fmt=fmt)
 
 
@@ -122,9 +144,9 @@ def H0_eff(H0, Ls):
 def make_qdyn_model(
         network_slh, num_vals, controls, energy_unit='MHz',
         mcwf=False, non_herm=False, use_dissipation_superop=True,
-        states=None):
-    """Construct a QDYN LevelModel for a two-node network, configured for
-    propagation
+        states=None, nodiss=False):
+    """Construct a QDYN LevelModel for a network of one or more nodes,
+    configured for propagation
 
     Args:
         network_slh (SLH): SLH model of the system
@@ -145,6 +167,7 @@ def make_qdyn_model(
             ``non_herm=False``
         states (dict or None): dict label => state (numpy array of amplitudes).
             If None, no state will be added to the model.
+        nodiss (bool): If True, drop any dissipation from the system
 
     Notes:
 
@@ -173,6 +196,8 @@ def make_qdyn_model(
 
     control_syms = list(controls.keys())
 
+    network_slh = move_drive_to_H(network_slh)
+
     H_num = network_slh.H.substitute(num_vals)
     ham_parts = split_hamiltonian(H_num, use_cc=False, controls=control_syms)
     hs = H_num.space
@@ -189,11 +214,17 @@ def make_qdyn_model(
         assert pulse.T == T
         assert pulse.time_unit == time_unit
 
+    hs_labels = [ls.label for ls in hs.local_factors]
+    assert 'q1' in hs_labels
+    n_nodes = len([l for l in hs_labels if l.startswith('q')])
+
     H0 = (convert_to_qutip(ham_parts['H0'], full_space=hs) +
           convert_to_qutip(ham_parts['Hint'], full_space=hs))
 
     Ls = [convert_to_qutip(L.substitute(num_vals), full_space=hs)
           for L in network_slh.Ls]
+    if nodiss:
+        Ls = []
 
     model = QDYN.model.LevelModel()
 
@@ -259,7 +290,7 @@ def make_qdyn_model(
                           op_type='dipole', conjg_pulse=True)
         else:
             model.add_ham(H_d, pulse=pulse, op_unit='dimensionless',
-                        op_type='dipole')
+                          op_type='dipole')
 
     # states
     if states is not None:
@@ -268,26 +299,39 @@ def make_qdyn_model(
             model.add_state(psi, label)
 
     # observables
-    L_total = Ls[0].dag() * Ls[0]
-    for L in Ls[1:]:
-        L_total += L.dag() * L
-    if L_total.norm() > 1e-14:
+    if not nodiss:
+        L_total = Ls[0].dag() * Ls[0]
+        for L in Ls[1:]:
+            L_total += L.dag() * L
+        if L_total.norm() > 1e-14:
+            model.add_observable(
+                L_total, outfile='darkstate_cond.dat', exp_unit=energy_unit,
+                time_unit='microsec', col_label='<L^+L>', is_real=True)
+    if n_nodes >= 2:
+        for (i, j) in [(0, 0), (0, 1), (1, 0), (1, 1)]:
+            ket = logical_2q_state(hs, i, j)
+            rho = ket * ket.dag()
+            model.add_observable(
+                rho, outfile='qubit_pop.dat', exp_unit='dimensionless',
+                time_unit='microsec', col_label='P(%d%d)' % (i, j),
+                is_real=True)
+        rho = logical_2q_state(hs, 1, 0) * logical_2q_state(hs, 0, 1).dag()
         model.add_observable(
-            L_total, outfile='darkstate_cond.dat', exp_unit=energy_unit,
-            time_unit='microsec', col_label='<L^+L>', is_real=True)
-    for (i, j) in [(0, 0), (0, 1), (1, 0), (1, 1)]:
-        ket = logical_2q_state(hs, i, j)
-        rho = ket * ket.dag()
-        model.add_observable(
-            rho, outfile='qubit_pop.dat', exp_unit='dimensionless',
-            time_unit='microsec', col_label='P(%d%d)' % (i, j),
-            is_real=True)
-    rho = logical_2q_state(hs, 1, 0) * logical_2q_state(hs, 0, 1).dag()
-    model.add_observable(
-        rho, outfile='10_01_coherence.dat', exp_unit='dimensionless',
-        time_unit='microsec', col_label='|10><01|', is_real=False)
+            rho, outfile='10_01_coherence.dat', exp_unit='dimensionless',
+            time_unit='microsec', col_label='|10><01|', is_real=False)
+    elif n_nodes == 1:
+        for i in [0, 1]:
+            ket = logical_1q_state(hs, i)
+            rho = ket * ket.dag()
+            model.add_observable(
+                rho, outfile='qubit_pop.dat', exp_unit='dimensionless',
+                time_unit='microsec', col_label='P(%d)' % i,
+                is_real=True)
+    else:
+        raise ValueError("Invalid number of nodes")
     for ls in hs.local_factors:
-        n_op = convert_to_qutip(Create(hs=ls) * Destroy(hs=ls), full_space=hs)
+        n_op = convert_to_qutip(Create(hs=ls) * Destroy(hs=ls),
+                                full_space=hs)
         model.add_observable(
             n_op, outfile='excitation.dat', exp_unit='dimensionless',
             time_unit='microsec', col_label=ls.label, is_real=True)
@@ -302,7 +346,7 @@ def make_qdyn_oct_model(
         network_slh, num_vals, controls, *, oct_target, energy_unit='MHz',
         mcwf=False, non_herm=False, use_dissipation_superop=True,
         lambda_a=1e-5, seed=None, **kwargs):
-    """Construct a QDYN level model for OCT"""
+    """Construct a QDYN level model for OCT, for two or more nodes"""
     hs = network_slh.H.space
     psi00 = logical_2q_state(hs, 0, 0)
     psi01 = logical_2q_state(hs, 0, 1)
@@ -352,11 +396,74 @@ def make_qdyn_oct_model(
     elif oct_target == 'dicke':
         model.user_data['initial_states'] = '10'
         model.user_data['target_states'] = 'dicke'
+    elif oct_target == 'excite_first_qubit':
+        model.user_data['initial_states'] = '00'
+        model.user_data['target_states'] = '10'
     elif oct_target == 'excitation_transfer_bw':
         model.user_data['initial_states'] = '01'
         model.user_data['target_states'] = '10'
     elif oct_target == 'gate':
         model.user_data['basis'] = '00,01,10,11'
+        model.user_data['gate'] = 'target_gate.dat'
+    else:
+        raise ValueError("Unknown oct_target %s" % oct_target)
+
+    if seed is not None:
+        model.user_data['seed'] = seed
+
+    return model
+
+
+def make_qdyn_oct_single_node_model(
+        network_slh, num_vals, controls, *, oct_target, energy_unit='MHz',
+        mcwf=False, non_herm=False, use_dissipation_superop=True,
+        lambda_a=1e-5, seed=None, nodiss=False, **kwargs):
+    """Construct a QDYN level model for OCT for control tasks on a single
+    node"""
+    hs = network_slh.H.space
+    psi0 = logical_1q_state(hs, 0)
+    psi1 = logical_1q_state(hs, 1)
+    states = OrderedDict([('0', psi0), ('1', psi1)])
+
+    model = make_qdyn_model(
+        network_slh, num_vals, controls, energy_unit=energy_unit, mcwf=mcwf,
+        non_herm=non_herm, use_dissipation_superop=use_dissipation_superop,
+        states=states, nodiss=nodiss)
+
+    pulse_settings = {}
+    for i, pulse in enumerate(model.pulses()):
+        pulse_setting = OrderedDict([
+            ('oct_shape', 'flattop'),
+            ('shape_t_start', pulse.t0), ('shape_t_stop', pulse.T),
+            ('t_rise', 0.1*pulse.T), ('t_fall', 0.1*pulse.T),
+            ('oct_lambda_a', lambda_a), ('oct_increase_factor', 5),
+            ('oct_outfile', 'pulse%d.oct.dat' % (i+1)),
+            ('oct_pulse_max', UnitFloat(500, 'MHz')),
+            ('oct_pulse_min',  UnitFloat(-500, 'MHz')),
+        ])
+        pulse_settings[pulse] = pulse_setting
+
+    oct_settings = OrderedDict([
+        ('pulse_settings', pulse_settings),
+        ('method', 'krotovpk'),
+        ('J_T_conv', 1e-4),
+        ('max_ram_mb', 100000),
+        ('iter_dat', 'oct_iters.dat'),
+        ('iter_stop', 100),
+        ('tau_dat', 'oct_tau.dat'),
+        ('params_file', 'oct_params.dat'),
+        ('limit_pulses', True),
+        ('keep_pulses', 'all'),
+        ])
+    oct_settings.update(kwargs)
+
+    model.set_oct(**oct_settings)
+
+    if oct_target == 'excite_qubit':
+        model.user_data['initial_states'] = '0'
+        model.user_data['target_states'] = '1'
+    elif oct_target == 'gate':
+        model.user_data['basis'] = '0,1'
         model.user_data['gate'] = 'target_gate.dat'
     else:
         raise ValueError("Unknown oct_target %s" % oct_target)
