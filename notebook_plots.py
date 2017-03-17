@@ -14,27 +14,33 @@ import QDYN
 from algebra import split_hamiltonian
 
 
-def show_summary(rf, pulses='pulse*.oct.dat'):
+def show_summary(rf, pulses='pulse*.oct.dat', single_node=False, xrange=None):
     """Show plot of observables"""
     fig = plt.figure(figsize=(16, 3.5), dpi=70)
 
-    ax = fig.add_subplot(131)
+    axs = []
+
+    axs.append(fig.add_subplot(131))
     try:
-        render_population(ax, rf)
+        render_population(axs[-1], rf, single_node=single_node)
     except OSError:
         pass
 
-    ax = fig.add_subplot(132)
+    axs.append(fig.add_subplot(132))
     try:
-        render_excitation(ax, rf)
+        render_excitation(axs[-1], rf)
     except OSError:
         pass
 
-    ax = fig.add_subplot(133)
+    axs.append(fig.add_subplot(133))
     try:
-        render_pulses(ax, rf, pulses)
+        render_pulses(axs[-1], rf, pulses)
     except OSError:
         pass
+
+    if xrange is not None:
+        for ax in axs:
+            ax.set_xlim(*xrange)
 
     plt.show(fig)
 
@@ -65,14 +71,19 @@ def render_pulses(ax, rf, pulses='pulse*.oct.dat'):
     ax.legend()
 
 
-def render_population(ax, rf):
+def render_population(ax, rf, single_node=False):
     qubit_pop = np.genfromtxt(join(rf, 'qubit_pop.dat')).transpose()
     tgrid = qubit_pop[0]  # microsecond
-    ax.plot(tgrid, qubit_pop[1], label=r'00')
-    ax.plot(tgrid, qubit_pop[2], label=r'01')
-    ax.plot(tgrid, qubit_pop[3], label=r'10')
-    ax.plot(tgrid, qubit_pop[4], label=r'11')
-    total = qubit_pop[1] + qubit_pop[2] + qubit_pop[3] + qubit_pop[4]
+    if single_node:
+        ax.plot(tgrid, qubit_pop[1], label=r'0')
+        ax.plot(tgrid, qubit_pop[2], label=r'1')
+        total = qubit_pop[1] + qubit_pop[2]
+    else:
+        ax.plot(tgrid, qubit_pop[1], label=r'00')
+        ax.plot(tgrid, qubit_pop[2], label=r'01')
+        ax.plot(tgrid, qubit_pop[3], label=r'10')
+        ax.plot(tgrid, qubit_pop[4], label=r'11')
+        total = qubit_pop[1] + qubit_pop[2] + qubit_pop[3] + qubit_pop[4]
     ax.plot(tgrid, total, label=r'total', ls='--')
     ax.legend(loc='best', fancybox=True, framealpha=0.5)
     ax.set_ylim([0, 1.1])
