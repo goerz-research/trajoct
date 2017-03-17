@@ -2,7 +2,7 @@
 `single_sided_node.py`"""
 from sympy import symbols
 from qnet.algebra.circuit_algebra import (
-    connect, CircuitSymbol, SLH)
+    connect, CircuitSymbol, SLH, move_drive_to_H)
 from qnet.circuit_components.beamsplitter_cc import Beamsplitter
 from qnet.circuit_components.displace_cc import Displace
 
@@ -47,7 +47,7 @@ def network_circuit(n_nodes, topology='open'):
     return circuit
 
 
-def network_slh(n_cavity, n_nodes, topology='open'):
+def network_slh(n_cavity, n_nodes, topology='open', inhom=False):
     """Return the symbolic SLH for the entire network"""
     circuit = network_circuit(n_nodes, topology)
     slh_mapping = {}
@@ -60,4 +60,7 @@ def network_slh(n_cavity, n_nodes, topology='open'):
         S.expand().simplify_scalar(),
         L.expand().simplify_scalar(),
         H.expand().simplify_scalar())
-    return slh
+    if inhom:
+        return slh
+    else:
+        return move_drive_to_H(slh)

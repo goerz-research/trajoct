@@ -1,6 +1,7 @@
 """Construct a network of nodes, where each node is as in
 `double_sided_node.py`"""
-from qnet.algebra.circuit_algebra import connect, CircuitSymbol, SLH
+from qnet.algebra.circuit_algebra import (
+    connect, CircuitSymbol, SLH, move_drive_to_H)
 
 import double_sided_node
 
@@ -35,13 +36,16 @@ def network_circuit(n_nodes, topology='open'):
 
 
 def network_slh(
-        n_cavity, n_nodes, topology='open', _network_circuit=None,
-        _node_slh=None):
+        n_cavity, n_nodes, topology='open',  inhom=False,
+        _network_circuit=None, _node_slh=None,):
     """Set up a chain of JC system with two channels
 
     Args:
         n_cavity (int): Number of levels in the cavity (numerical truncation)
         n_nodes (int):  Number of nodes in the chain
+        inhom (bool): By default, inhomogeneities resulting from a drive are
+            eliminated in the SLH model. By specifying `inhom` as False, this
+            elimination is suppressed (for debugging purposes)
         topology (str or None): How the nodes should be linked up, see below
         _network_circuit (callable or None): routine that returns the network
             circuit. If None, `network_circuit`
@@ -77,4 +81,7 @@ def network_slh(
         S.expand().simplify_scalar(),
         L.expand().simplify_scalar(),
         H.expand().simplify_scalar())
-    return slh
+    if inhom:
+        return slh
+    else:
+        return move_drive_to_H(slh)
