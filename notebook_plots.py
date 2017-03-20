@@ -146,11 +146,13 @@ def display_hamiltonian(H):
             return r'\hat{H}_{\text{int}}'
         else:
             try:
-                prefix, ind = s.split('_')
+                ind = s.split("_")[-1]
             except ValueError:
                 print(s)
                 raise
-            return r'\hat{H}_{d_%s}' % ind
+            if len(ind) > 1:
+                ind = r'\%s' % ind
+            return r'\hat{H}_{%s}' % ind
 
     lines = []
     lines.append(r'\begin{align}')

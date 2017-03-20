@@ -41,7 +41,7 @@ def split_hamiltonian(H, use_cc=True, controls='Omega'):
 
     for i in range(n_controls):
         mapping = all_zero_except(controls, i)
-        res['Hd_%d' % (i+1)] = Hdrive.substitute(mapping)
+        res['H_%s' % str(controls[i])] = Hdrive.substitute(mapping)
     if use_cc:
         for name, H in res.items():
             with extra_binary_rules(OperatorPlus, create_operator_pm_cc()):
