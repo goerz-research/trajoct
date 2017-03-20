@@ -345,7 +345,7 @@ def make_qdyn_model(
 def make_qdyn_oct_model(
         network_slh, num_vals, controls, *, oct_target, energy_unit='MHz',
         mcwf=False, non_herm=False, use_dissipation_superop=True,
-        lambda_a=1e-5, seed=None, **kwargs):
+        lambda_a=1e-5, seed=None, allow_negative=True, **kwargs):
     """Construct a QDYN level model for OCT, for two or more nodes"""
     hs = network_slh.H.space
     psi00 = logical_2q_state(hs, 0, 0)
@@ -363,14 +363,19 @@ def make_qdyn_oct_model(
 
     pulse_settings = {}
     for i, pulse in enumerate(model.pulses()):
+        E_max = 10 * UnitFloat(np.max(np.abs(pulse.amplitude)),
+                               pulse.ampl_unit)
+        if allow_negative:
+            E_min = - E_max
+        else:
+            E_min = 0
         pulse_setting = OrderedDict([
             ('oct_shape', 'flattop'),
             ('shape_t_start', pulse.t0), ('shape_t_stop', pulse.T),
             ('t_rise', 0.1*pulse.T), ('t_fall', 0.1*pulse.T),
             ('oct_lambda_a', lambda_a), ('oct_increase_factor', 5),
             ('oct_outfile', 'pulse%d.oct.dat' % (i+1)),
-            ('oct_pulse_max', UnitFloat(500, 'MHz')),
-            ('oct_pulse_min',  UnitFloat(-500, 'MHz')),
+            ('oct_pulse_max', E_max), ('oct_pulse_min',  E_min),
         ])
         pulse_settings[pulse] = pulse_setting
 
