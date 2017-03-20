@@ -125,6 +125,15 @@ def display_with_cc(expr):
         display(expr.simplify())
 
 
+def display_eq(lhs, rhs):
+    """Display the eqution defined by the given lhs and rhs"""
+    lines = []
+    lines.append(r'\begin{equation}')
+    lines.append(tex(lhs) + ' = ' + tex(rhs))
+    lines.append(r'\end{equation}')
+    display(Latex("\n".join(lines)))
+
+
 def display_hamiltonian(H):
     """display all the terms of the given Hamiltonian, separating drift,
     interaction, and the various control Hamiltonian onto different lines"""
