@@ -1,6 +1,6 @@
 """Construct a network of nodes, where each node is as in
 `single_sided_node.py`"""
-from sympy import symbols
+from sympy import Symbol, symbols, sqrt
 from qnet.algebra.circuit_algebra import (
     connect, CircuitSymbol, SLH, move_drive_to_H)
 from qnet.circuit_components.beamsplitter_cc import Beamsplitter
@@ -34,12 +34,12 @@ def network_circuit(n_nodes, topology='open'):
         connections.append(((prev_node, 0), (BS, 0)))
         connections.append(((BS, 1), (nodes[0], 0)))
         if 'driven' in topology:
-            W = Displace('W', alpha=symbols('Omega_a'))
+            W = Displace('W', alpha=symbols('alpha'))
             nodes.append(W)
             connections.append(((W, 0), (BS, 1)))
     else: # open topology
         if 'driven' in topology:  # driven_open
-            W = Displace('W', alpha=symbols('Omega_a'))
+            W = Displace('W', alpha=symbols('alpha'))
             nodes.append(W)
             connections.append(((W, 0), (nodes[0], 0)))
 
@@ -56,10 +56,16 @@ def network_slh(n_cavity, n_nodes, topology='open', inhom=False):
         slh_mapping[node_symbol(ind)] \
             = single_sided_node.node_slh(ind, n_cavity)
     S, L, H = circuit.substitute(slh_mapping).toSLH()
-    slh = SLH(
-        S.expand().simplify_scalar(),
-        L.expand().simplify_scalar(),
-        H.expand().simplify_scalar())
+    κ = Symbol('kappa', positive=True)
+    α, Ω = symbols('alpha Omega_alpha')
+    S.expand().simplify_scalar()
+    H = H.expand().simplify_scalar().substitute({
+        α: (Ω.conjugate() / sqrt(κ)),
+    })
+    L = L.expand().simplify_scalar().substitute({
+        α: (Ω.conjugate() / sqrt(κ)),
+    })
+    slh = SLH(S, L, H)
     if inhom:
         return slh
     else:
