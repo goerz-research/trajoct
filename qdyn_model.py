@@ -256,7 +256,10 @@ def make_qdyn_model(
             model.set_dissipator(D, op_unit=energy_unit)
         else:
             for L in Ls:
-                model.add_lindblad_op(L, op_unit='sqrt_%s' % energy_unit)
+                lindblad_unit = 'sqrt_%s' % energy_unit
+                if energy_unit in ['dimensionless', 'unitless', 'iu']:
+                    lindblad_unit = energy_unit
+                model.add_lindblad_op(L, op_unit=lindblad_unit)
         model.set_propagation(
             T=T, nt=nt, t0=t0, time_unit=time_unit, prop_method='newton')
 
@@ -271,7 +274,10 @@ def make_qdyn_model(
 
         # MCWF propagation
         for L in Ls:
-            model.add_lindblad_op(L, op_unit='sqrt_%s' % energy_unit,
+            lindblad_unit = 'sqrt_%s' % energy_unit
+            if energy_unit in ['dimensionless', 'unitless', 'iu']:
+                lindblad_unit = energy_unit
+            model.add_lindblad_op(L, op_unit=lindblad_unit,
                                   add_to_H_jump='indexed',
                                   conv_to_superop=False)
         if non_herm:
@@ -315,6 +321,9 @@ def make_qdyn_model(
             model.add_state(psi, label)
 
     # observables
+    time_unit = 'microsec'
+    if energy_unit == 'dimensionless':
+        time_unit = 'dimensionless'
     if not nodiss:
         L_total = Ls[0].dag() * Ls[0]
         for L in Ls[1:]:
@@ -322,26 +331,26 @@ def make_qdyn_model(
         if L_total.norm() > 1e-14:
             model.add_observable(
                 L_total, outfile='darkstate_cond.dat', exp_unit=energy_unit,
-                time_unit='microsec', col_label='<L^+L>', is_real=True)
+                time_unit=time_unit, col_label='<L^+L>', is_real=True)
     if n_nodes >= 2:
         for (i, j) in [(0, 0), (0, 1), (1, 0), (1, 1)]:
             ket = logical_2q_state(hs, i, j)
             rho = ket * ket.dag()
             model.add_observable(
                 rho, outfile='qubit_pop.dat', exp_unit='dimensionless',
-                time_unit='microsec', col_label='P(%d%d)' % (i, j),
+                time_unit=time_unit, col_label='P(%d%d)' % (i, j),
                 is_real=True)
         rho = logical_2q_state(hs, 1, 0) * logical_2q_state(hs, 0, 1).dag()
         model.add_observable(
             rho, outfile='10_01_coherence.dat', exp_unit='dimensionless',
-            time_unit='microsec', col_label='|10><01|', is_real=False)
+            time_unit=time_unit, col_label='|10><01|', is_real=False)
     elif n_nodes == 1:
         for i in [0, 1]:
             ket = logical_1q_state(hs, i)
             rho = ket * ket.dag()
             model.add_observable(
                 rho, outfile='qubit_pop.dat', exp_unit='dimensionless',
-                time_unit='microsec', col_label='P(%d)' % i,
+                time_unit=time_unit, col_label='P(%d)' % i,
                 is_real=True)
     else:
         raise ValueError("Invalid number of nodes")
@@ -350,7 +359,7 @@ def make_qdyn_model(
                                 full_space=hs)
         model.add_observable(
             n_op, outfile='excitation.dat', exp_unit='dimensionless',
-            time_unit='microsec', col_label=ls.label, is_real=True)
+            time_unit=time_unit, col_label=ls.label, is_real=True)
 
     model.user_data['time_unit'] = time_unit
     model.user_data['write_jump_record'] = 'jump_record.dat'
@@ -394,7 +403,8 @@ def make_qdyn_oct_model(
         pulse_setting = OrderedDict([
             ('oct_shape', 'flattop'),
             ('shape_t_start', pulse.t0), ('shape_t_stop', pulse.T),
-            ('t_rise', 0.1*pulse.T), ('t_fall', 0.1*pulse.T),
+            ('t_rise', 0.1*(pulse.T-pulse.t0)),
+            ('t_fall', 0.1*(pulse.T-pulse.t0)),
             ('oct_lambda_a', lambda_a), ('oct_increase_factor', 5),
             ('oct_outfile', 'pulse%d.oct.dat' % (i+1)),
             ('oct_pulse_max', E_max), ('oct_pulse_min',  E_min),

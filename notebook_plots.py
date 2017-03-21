@@ -76,7 +76,7 @@ def render_pulses(ax, rf, pulses='pulse*.oct.dat'):
 
 def render_population(ax, rf, single_node=False):
     qubit_pop = np.genfromtxt(join(rf, 'qubit_pop.dat')).transpose()
-    tgrid = qubit_pop[0]  # microsecond
+    tgrid = qubit_pop[0]
     if single_node:
         ax.plot(tgrid, qubit_pop[1], label=r'0')
         ax.plot(tgrid, qubit_pop[2], label=r'1')
@@ -90,7 +90,7 @@ def render_population(ax, rf, single_node=False):
     ax.plot(tgrid, total, label=r'total', ls='--')
     ax.legend(loc='best', fancybox=True, framealpha=0.5)
     ax.set_ylim([0, 1.1])
-    ax.set_xlabel("time (microsecond)")
+    ax.set_xlabel("time")
     ax.set_ylabel("population")
 
 
@@ -100,7 +100,7 @@ def render_excitation(ax, rf, atoms_only=False):
         header = in_fh.readline()
         labels = header.strip('#').strip().split()[2:]
     excitation = np.genfromtxt(exc_file).transpose()
-    tgrid = excitation[0]  # microsecond
+    tgrid = excitation[0]
     total = np.zeros(len(tgrid))
     accept = lambda label: True
     render_label = lambda label: label
@@ -114,7 +114,7 @@ def render_excitation(ax, rf, atoms_only=False):
     ax.plot(tgrid, total, ls='--', label='total')
     ax.legend(loc='best', fancybox=True, framealpha=0.5)
     ax.set_ylim([0, max(1.0, 1.05*ax.get_ylim()[1])])
-    ax.set_xlabel("time (microsecond)")
+    ax.set_xlabel("time")
     ax.set_ylabel("excitation")
 
 
@@ -181,7 +181,7 @@ def get_weyl_table(U_of_t_dat):
         c2s.append(c2)
         c3s.append(c3)
     return pd.DataFrame(data=OrderedDict([
-        ('t [microsec]', tgrid),
+        ('t', tgrid),
         ('concurrence', concurrence),
         ('loss', loss),
         ('c1', c1s),
