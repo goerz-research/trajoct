@@ -8,8 +8,9 @@ from qnet.algebra.hilbert_space_algebra import LocalSpace, ProductSpace
 
 def split_hamiltonian(H, use_cc=True, controls='Omega'):
     """Split the given symbolic Hamiltonian into drift, interaction, and drive
-    Hamiltonians. Returns a dictionary with keys 'H0', 'Hint', 'Hd_1',
-    'Hd_2', ..., mapping to the respective Hamiltonians.
+    Hamiltonians. Returns a dictionary with keys 'H0', 'Hint', 'Hd_{control}',
+    ..., where {control} is the string rendering of the control symbol. The
+    dictionary maps to the respective Hamiltonians.
 
     Args:
         H (Operator): The full (symbolic) Hamiltonian
