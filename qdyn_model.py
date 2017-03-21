@@ -89,7 +89,7 @@ def logical_1q_state(space, i, fmt='qutip'):
     return state(space, *qnums, fmt=fmt)
 
 
-def dicke1_state(space, fmt='qutip'):
+def dicke_state(space, fmt='qutip', excitations=1):
     """Return the single-excitation dicke state for the given system. Assumes
     that the Hilbert spaces for the qubits at the different nodes are labeled
     'q1', 'q2', ...
@@ -97,18 +97,33 @@ def dicke1_state(space, fmt='qutip'):
     For example for a Hilbert space ``('q1', 'c1', 'q2', 'c2', 'q3', 'c3')``,
     the Dicke state is ``(|000010> + |001000> + |100000>) / sqrt(3)``
     """
-    dicke_state = None
+    assert excitations == 1
+    res = None
     labels = [ls.label for ls in space.local_factors]
-    n = len(labels)
     n_nodes = len([l for l in labels if l.startswith('q')])
     for i_node in range(n_nodes):
         label = 'q%d' % (i_node + 1)
         qnums = [1 if l == label else 0 for l in labels]
-        if dicke_state is None:
-            dicke_state = state(space, *qnums, fmt=fmt)
+        if res is None:
+            res = state(space, *qnums, fmt=fmt)
         else:
-            dicke_state += state(space, *qnums, fmt=fmt)
-    return dicke_state / np.sqrt(n_nodes)
+            res += state(space, *qnums, fmt=fmt)
+    return res / np.sqrt(n_nodes)
+
+
+def dicke_init_state(space, fmt='qutip', excitations=1):
+    """Return the the state of the first $n$ nodes are in the excited states,
+    wheren $n$ is given by `excitations`
+    """
+    labels = [ls.label for ls in space.local_factors]
+    qnums = []
+    for label in labels:
+        if label.startswith('q') and excitations > 0:
+            qnums.append(1)
+            excitations = excitations - 1
+        else:
+            qnums.append(0)
+    return state(space, *qnums, fmt=fmt)
 
 
 def err_state_to_state(target_state, final_states_glob):
@@ -276,7 +291,8 @@ def make_qdyn_model(
     # control Hamiltonians
     for i, control_sym in enumerate(control_syms):
         H_d = convert_to_qutip(
-            ham_parts['Hd_%d' % (i+1)].substitute({control_sym: 1}),
+            ham_parts['H_%s' % (str(control_sym))].substitute(
+                {control_sym: 1}),
             full_space=hs)
         pulse = controls[control_sym]
         if pulse.is_complex:
@@ -348,13 +364,19 @@ def make_qdyn_oct_model(
         lambda_a=1e-5, seed=None, allow_negative=True, **kwargs):
     """Construct a QDYN level model for OCT, for two or more nodes"""
     hs = network_slh.H.space
+    labels = [ls.label for ls in hs.local_factors]
+    n_nodes = len([l for l in labels if l.startswith('q')])
+    assert 1 < n_nodes < 10
     psi00 = logical_2q_state(hs, 0, 0)
     psi01 = logical_2q_state(hs, 0, 1)
     psi10 = logical_2q_state(hs, 1, 0)
     psi11 = logical_2q_state(hs, 1, 1)
-    dicke = dicke1_state(hs)
-    states = OrderedDict([('00', psi00), ('01', psi01), ('10', psi10),
-                          ('11', psi11), ('dicke', dicke)])
+    dicke_1 = dicke_state(hs, excitations=1)
+    dicke_init_half = dicke_init_state(hs, excitations=(n_nodes//2))
+    #dicke_half = dicke_state(hs, excitations=(n_nodes//2))  # TODO
+    states = OrderedDict(
+        [('00', psi00), ('01', psi01), ('10', psi10), ('11', psi11),
+         ('dicke_init_half', dicke_init_half), ('dicke_1', dicke_1)])
 
     model = make_qdyn_model(
         network_slh, num_vals, controls, energy_unit=energy_unit, mcwf=mcwf,
@@ -398,9 +420,15 @@ def make_qdyn_oct_model(
     if oct_target == 'excitation_transfer_fw':
         model.user_data['initial_states'] = '10'
         model.user_data['target_states'] = '01'
-    elif oct_target == 'dicke':
+    elif oct_target == 'dicke_1':
         model.user_data['initial_states'] = '10'
-        model.user_data['target_states'] = 'dicke'
+        model.user_data['target_states'] = 'dicke_1'
+    elif oct_target == 'dicke_init_half':
+        model.user_data['initial_states'] = '00'
+        model.user_data['target_states'] = 'dicke_init_half'
+    elif oct_target == 'dicke_half':
+        model.user_data['initial_states'] = 'dicke_init_half'
+        model.user_data['target_states'] = 'dicke_half'
     elif oct_target == 'excite_first_qubit':
         model.user_data['initial_states'] = '00'
         model.user_data['target_states'] = '10'
