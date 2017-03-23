@@ -54,13 +54,19 @@ def show_summary_dicke(rf, pulses='pulse*.oct.dat', single_node=False, xrange=No
 
     axs = []
 
-    axs.append(fig.add_subplot(121))
+    axs.append(fig.add_subplot(131))
     try:
-        render_excitation(axs[-1], rf)
+        render_excitation(axs[-1], rf, filter='c')
     except OSError:
         pass
 
-    axs.append(fig.add_subplot(122))
+    axs.append(fig.add_subplot(132))
+    try:
+        render_excitation(axs[-1], rf, filter='q')
+    except OSError:
+        pass
+
+    axs.append(fig.add_subplot(133))
     try:
         render_pulses(axs[-1], rf, pulses)
     except OSError:
@@ -69,25 +75,6 @@ def show_summary_dicke(rf, pulses='pulse*.oct.dat', single_node=False, xrange=No
     if xrange is not None:
         for ax in axs:
             ax.set_xlim(*xrange)
-
-    plt.show(fig)
-
-
-def show_dicke_summary(rf, pulses='pulse*.oct.dat'):
-    """Show plot of observables"""
-    fig = plt.figure(figsize=(16, 3.5), dpi=70)
-
-    ax = fig.add_subplot(121)
-    try:
-        render_excitation(ax, rf, atoms_only=True)
-    except OSError:
-        pass
-
-    ax = fig.add_subplot(122)
-    try:
-        render_pulses(ax, rf, pulses)
-    except OSError:
-        pass
 
     plt.show(fig)
 
@@ -119,7 +106,7 @@ def render_population(ax, rf, single_node=False):
     ax.set_ylabel("population")
 
 
-def render_excitation(ax, rf, atoms_only=False):
+def render_excitation(ax, rf, filter=''):
     exc_file = join(rf, 'excitation.dat')
     with open(exc_file) as in_fh:
         header = in_fh.readline()
@@ -129,9 +116,8 @@ def render_excitation(ax, rf, atoms_only=False):
     total = np.zeros(len(tgrid))
     accept = lambda label: True
     render_label = lambda label: label
-    if atoms_only:
-        accept = lambda label: label.startswith('q')
-        rener_label = lambda label: label[1:]
+    accept = lambda label: label.startswith(filter)
+    render_label = lambda label: label[1:]
     for i, label in enumerate(labels):
         total += excitation[i+1]
         if accept(label):
