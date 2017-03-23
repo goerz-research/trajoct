@@ -328,7 +328,7 @@ def make_qdyn_model(
         L_total = Ls[0].dag() * Ls[0]
         for L in Ls[1:]:
             L_total += L.dag() * L
-        if L_total.norm() > 1e-14:
+        if L_total.norm('max') > 1e-14:
             model.add_observable(
                 L_total, outfile='darkstate_cond.dat', exp_unit=energy_unit,
                 time_unit=time_unit, col_label='<L^+L>', is_real=True)
