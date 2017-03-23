@@ -17,7 +17,7 @@ import QDYN
 from algebra import split_hamiltonian
 
 
-def show_summary(rf, pulses='pulse*.oct.dat', single_node=False, xrange=None):
+def show_summary_gate(rf, pulses='pulse*.oct.dat', single_node=False, xrange=None):
     """Show plot of observables"""
     fig = plt.figure(figsize=(16, 3.5), dpi=70)
 
@@ -36,6 +36,31 @@ def show_summary(rf, pulses='pulse*.oct.dat', single_node=False, xrange=None):
         pass
 
     axs.append(fig.add_subplot(133))
+    try:
+        render_pulses(axs[-1], rf, pulses)
+    except OSError:
+        pass
+
+    if xrange is not None:
+        for ax in axs:
+            ax.set_xlim(*xrange)
+
+    plt.show(fig)
+
+
+def show_summary_dicke(rf, pulses='pulse*.oct.dat', single_node=False, xrange=None):
+    """Show plot of observables"""
+    fig = plt.figure(figsize=(16, 3.5), dpi=70)
+
+    axs = []
+
+    axs.append(fig.add_subplot(121))
+    try:
+        render_excitation(axs[-1], rf)
+    except OSError:
+        pass
+
+    axs.append(fig.add_subplot(122))
     try:
         render_pulses(axs[-1], rf, pulses)
     except OSError:
