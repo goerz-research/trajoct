@@ -58,12 +58,13 @@ def network_slh(n_cavity, n_nodes, topology='open', inhom=False):
     S, L, H = circuit.substitute(slh_mapping).toSLH()
     κ = Symbol('kappa', positive=True)
     α, Ω = symbols('alpha Omega_alpha')
+    λ = symbols('lambda', real=True)
     S.expand().simplify_scalar()
     H = H.expand().simplify_scalar().substitute({
-        α: (Ω.conjugate() / sqrt(κ)),
+        α: (λ * Ω.conjugate() / (2 * sqrt(κ))),
     })
     L = L.expand().simplify_scalar().substitute({
-        α: (Ω.conjugate() / sqrt(κ)),
+        α: (λ * Ω.conjugate() / (2 * sqrt(κ))),
     })
     slh = SLH(S, L, H)
     if inhom:
