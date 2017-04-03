@@ -382,10 +382,12 @@ def make_qdyn_oct_model(
     psi11 = logical_2q_state(hs, 1, 1)
     dicke_1 = dicke_state(hs, excitations=1)
     dicke_init_half = dicke_init_state(hs, excitations=(n_nodes//2))
+    dicke_init_full = dicke_init_state(hs, excitations=(n_nodes))
     #dicke_half = dicke_state(hs, excitations=(n_nodes//2))  # TODO
     states = OrderedDict(
         [('00', psi00), ('01', psi01), ('10', psi10), ('11', psi11),
-         ('dicke_init_half', dicke_init_half), ('dicke_1', dicke_1)])
+         ('dicke_init_half', dicke_init_half),
+         ('dicke_init_full', dicke_init_full), ('dicke_1', dicke_1)])
 
     model = make_qdyn_model(
         network_slh, num_vals, controls, energy_unit=energy_unit, mcwf=mcwf,
@@ -434,6 +436,9 @@ def make_qdyn_oct_model(
         model.user_data['initial_states'] = '10'
         model.user_data['target_states'] = 'dicke_1'
     elif oct_target == 'dicke_init_half':
+        model.user_data['initial_states'] = '00'
+        model.user_data['target_states'] = 'dicke_init_half'
+    elif oct_target == 'dicke_init_full':
         model.user_data['initial_states'] = '00'
         model.user_data['target_states'] = 'dicke_init_half'
     elif oct_target == 'dicke_half':
