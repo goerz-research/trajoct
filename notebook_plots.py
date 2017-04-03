@@ -119,14 +119,17 @@ def render_excitation(ax, rf, filter=''):
     accept = lambda label: label.startswith(filter)
     render_label = lambda label: label[1:]
     for i, label in enumerate(labels):
-        total += excitation[i+1]
         if accept(label):
+            total += excitation[i+1]
             ax.plot(tgrid, excitation[i+1], label=render_label(label))
     ax.plot(tgrid, total, ls='--', label='total')
     ax.legend(loc='best', fancybox=True, framealpha=0.5)
     ax.set_ylim([0, max(1.0, 1.05*ax.get_ylim()[1])])
     ax.set_xlabel("time")
-    ax.set_ylabel("excitation")
+    if len(filter) > 0:
+        ax.set_ylabel("%s excitation" % filter)
+    else:
+        ax.set_ylabel("excitation")
 
 
 def display_with_cc(expr):
