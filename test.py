@@ -91,7 +91,7 @@ def test_no_feedback_system(model_no_fb, tmpdir):
 
     prop: method = newton, use_mcwf = F
 
-    pulse: type = file, time_unit = microsec, ampl_unit = MHz
+    pulse: type = file, time_unit = microsec, ampl_unit = MHz, is_complex = F
     * id = 1, filename = pulse1.dat
     * id = 2, filename = pulse2.dat
 
@@ -154,10 +154,11 @@ def test_no_feedback_oct_fw_system(model_no_fb_oct_fw, tmpdir):
 
     prop: method = newton, use_mcwf = F
 
-    pulse: oct_shape = flattop, shape_t_start = -4_microsec, &
-      shape_t_stop = 4_microsec, t_rise = 0.4_microsec, t_fall = 0.4_microsec, &
-      oct_lambda_a = 1e-05, oct_increase_factor = 5, oct_pulse_max = 500_MHz, &
-      oct_pulse_min = -500_MHz, type = file, time_unit = microsec, ampl_unit = MHz
+    pulse: type = file, time_unit = microsec, ampl_unit = MHz, is_complex = F, &
+      oct_shape = flattop, shape_t_start = -4_microsec, shape_t_stop = 4_microsec, &
+      t_rise = 0.8_microsec, t_fall = 0.8_microsec, oct_lambda_a = 1e-05, &
+      oct_increase_factor = 5, oct_pulse_max = 699.999_MHz, &
+      oct_pulse_min = -699.999_MHz
     * id = 1, filename = pulse1.dat, oct_outfile = pulse1.oct.dat
     * id = 2, filename = pulse2.dat, oct_outfile = pulse2.oct.dat
 
@@ -214,7 +215,13 @@ def test_no_feedback_oct_fw_system(model_no_fb_oct_fw, tmpdir):
     * type = file, filename = psi_11.dat, label = 11
 
     psi:
-    * type = file, filename = psi_dicke.dat, label = dicke
+    * type = file, filename = psi_dicke_init_half.dat, label = dicke_init_half
+
+    psi:
+    * type = file, filename = psi_dicke_init_full.dat, label = dicke_init_full
+
+    psi:
+    * type = file, filename = psi_dicke_1.dat, label = dicke_1
 
     oct: method = krotovpk, J_T_conv = 0.0001, max_ram_mb = 100000, &
       iter_dat = oct_iters.dat, iter_stop = 100, keep_pulses = all, &
@@ -240,10 +247,11 @@ def test_no_feedback_oct_gate_system(model_no_fb_oct_gate, tmpdir):
 
     prop: method = newton, use_mcwf = F
 
-    pulse: oct_shape = flattop, shape_t_start = -4_microsec, &
-      shape_t_stop = 4_microsec, t_rise = 0.4_microsec, t_fall = 0.4_microsec, &
-      oct_lambda_a = 1e-05, oct_increase_factor = 5, oct_pulse_max = 500_MHz, &
-      oct_pulse_min = -500_MHz, type = file, time_unit = microsec, ampl_unit = MHz
+    pulse: type = file, time_unit = microsec, ampl_unit = MHz, is_complex = F, &
+      oct_shape = flattop, shape_t_start = -4_microsec, shape_t_stop = 4_microsec, &
+      t_rise = 0.8_microsec, t_fall = 0.8_microsec, oct_lambda_a = 1e-05, &
+      oct_increase_factor = 5, oct_pulse_max = 699.999_MHz, &
+      oct_pulse_min = -699.999_MHz
     * id = 1, filename = pulse1.dat, oct_outfile = pulse1.oct.dat
     * id = 2, filename = pulse2.dat, oct_outfile = pulse2.oct.dat
 
@@ -300,7 +308,13 @@ def test_no_feedback_oct_gate_system(model_no_fb_oct_gate, tmpdir):
     * type = file, filename = psi_11.dat, label = 11
 
     psi:
-    * type = file, filename = psi_dicke.dat, label = dicke
+    * type = file, filename = psi_dicke_init_half.dat, label = dicke_init_half
+
+    psi:
+    * type = file, filename = psi_dicke_init_full.dat, label = dicke_init_full
+
+    psi:
+    * type = file, filename = psi_dicke_1.dat, label = dicke_1
 
     oct: method = krotovpk, J_T_conv = 0.0001, max_ram_mb = 100000, &
       iter_dat = oct_iters.dat, iter_stop = 100, keep_pulses = all, &
@@ -350,4 +364,5 @@ def test_dicke1_state():
     dicke_state = (qdyn_model.state(hs, 0, 0, 0, 0, 1, 0) +
                    qdyn_model.state(hs, 0, 0, 1, 0, 0, 0) +
                    qdyn_model.state(hs, 1, 0, 0, 0, 0, 0)) / np.sqrt(3)
-    assert (qdyn_model.dicke1_state(hs) - dicke_state).norm() < 1e-12
+    assert (qdyn_model.dicke_state(hs, excitations=1) -
+            dicke_state).norm() < 1e-12

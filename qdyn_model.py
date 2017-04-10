@@ -302,8 +302,6 @@ def make_qdyn_model(
             full_space=hs)
         pulse = controls[control_sym]
         if pulse.is_complex:
-            assert pulse.mode == 'complex'
-        if pulse.mode == 'complex':
             H_d_u = qutip.Qobj(triu(H_d))
             H_d_l = qutip.Qobj(tril(H_d))
             model.add_ham(H_d_u, pulse=pulse, op_unit='dimensionless',
@@ -372,6 +370,8 @@ def make_qdyn_oct_model(
         mcwf=False, non_herm=False, use_dissipation_superop=True,
         lambda_a=1e-5, seed=None, allow_negative=True, **kwargs):
     """Construct a QDYN level model for OCT, for two or more nodes"""
+    import logging
+    logger = logging.getLogger(__name__)
     hs = network_slh.H.space
     labels = [ls.label for ls in hs.local_factors]
     n_nodes = len([l for l in labels if l.startswith('q')])
@@ -394,27 +394,37 @@ def make_qdyn_oct_model(
         non_herm=non_herm, use_dissipation_superop=use_dissipation_superop,
         states=states)
 
-    pulse_settings = {}
     for i, pulse in enumerate(model.pulses()):
+
         E_max = 10 * UnitFloat(np.max(np.abs(pulse.amplitude)),
                                pulse.ampl_unit)
         if allow_negative:
             E_min = - E_max
         else:
             E_min = 0
-        pulse_setting = OrderedDict([
-            ('oct_shape', 'flattop'),
-            ('shape_t_start', pulse.t0), ('shape_t_stop', pulse.T),
-            ('t_rise', 0.1*(pulse.T-pulse.t0)),
-            ('t_fall', 0.1*(pulse.T-pulse.t0)),
-            ('oct_lambda_a', lambda_a), ('oct_increase_factor', 5),
-            ('oct_outfile', 'pulse%d.oct.dat' % (i+1)),
-            ('oct_pulse_max', E_max), ('oct_pulse_min',  E_min),
-        ])
-        pulse_settings[pulse] = pulse_setting
+
+        def set_pulse_setting(pulse, key, val, force=False):
+            """Set pulse.config_attribs[key] = val unless that key is already
+            set"""
+            if force and pulse.config_attribs.get(key, val) != val:
+                logger.warning("Overwriting pulse parameter %s: %s -> %s"
+                               % (key, pulse.config_attribs[key], val))
+                pulse.config_attribs[key] = val
+            else:
+                pulse.config_attribs[key] = pulse.config_attribs.get(key, val)
+
+        set_pulse_setting(pulse, 'oct_shape', 'flattop')
+        set_pulse_setting(pulse, 'shape_t_start', pulse.t0)
+        set_pulse_setting(pulse, 'shape_t_stop', pulse.T)
+        set_pulse_setting(pulse, 't_rise', 0.1*(pulse.T-pulse.t0))
+        set_pulse_setting(pulse, 't_fall', 0.1*(pulse.T-pulse.t0))
+        set_pulse_setting(pulse, 'oct_lambda_a', lambda_a, force=True)
+        set_pulse_setting(pulse, 'oct_outfile', 'pulse%d.oct.dat' % (i+1))
+        set_pulse_setting(pulse, 'oct_increase_factor', 5)
+        set_pulse_setting(pulse, 'oct_pulse_max', E_max)
+        set_pulse_setting(pulse, 'oct_pulse_min',  E_min)
 
     oct_settings = OrderedDict([
-        ('pulse_settings', pulse_settings),
         ('method', 'krotovpk'),
         ('J_T_conv', 1e-4),
         ('max_ram_mb', 100000),
@@ -478,9 +488,8 @@ def make_qdyn_oct_single_node_model(
         non_herm=non_herm, use_dissipation_superop=use_dissipation_superop,
         states=states, nodiss=nodiss)
 
-    pulse_settings = {}
     for i, pulse in enumerate(model.pulses()):
-        pulse_setting = OrderedDict([
+        pulse.config_attribs.update(OrderedDict([
             ('oct_shape', 'flattop'),
             ('shape_t_start', pulse.t0), ('shape_t_stop', pulse.T),
             ('t_rise', 0.1*pulse.T), ('t_fall', 0.1*pulse.T),
@@ -488,11 +497,9 @@ def make_qdyn_oct_single_node_model(
             ('oct_outfile', 'pulse%d.oct.dat' % (i+1)),
             ('oct_pulse_max', UnitFloat(500, 'MHz')),
             ('oct_pulse_min',  UnitFloat(-500, 'MHz')),
-        ])
-        pulse_settings[pulse] = pulse_setting
+        ]))
 
     oct_settings = OrderedDict([
-        ('pulse_settings', pulse_settings),
         ('method', 'krotovpk'),
         ('J_T_conv', 1e-4),
         ('max_ram_mb', 100000),
