@@ -87,6 +87,9 @@ ENV/
 # data
 /data
 
+# auto-converted html
+/*.html
+
 # Spyder project settings
 .spyderproject
 
