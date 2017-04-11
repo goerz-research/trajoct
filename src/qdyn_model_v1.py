@@ -18,7 +18,7 @@ from qnet.algebra.operator_algebra import Destroy, Create
 from qnet.algebra.circuit_algebra import move_drive_to_H
 from qnet.convert.to_qutip import convert_to_qutip
 
-from algebra import split_hamiltonian
+from .algebra_v1 import split_hamiltonian
 
 
 def dagger(op):

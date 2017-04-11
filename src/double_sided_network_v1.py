@@ -3,7 +3,7 @@
 from qnet.algebra.circuit_algebra import (
     connect, CircuitSymbol, SLH, move_drive_to_H)
 
-import double_sided_node
+from . import double_sided_node_v1 as double_sided_node
 
 
 def node_symbol(node_index):

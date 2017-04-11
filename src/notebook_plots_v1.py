@@ -14,7 +14,7 @@ from qnet.algebra import pattern, wc, ScalarTimesOperator
 
 import QDYN
 
-from algebra import split_hamiltonian
+from .algebra_v1 import split_hamiltonian
 
 
 def show_summary_gate(rf, pulses='pulse*.oct.dat', single_node=False, xrange=None):

@@ -6,7 +6,7 @@ from qnet.algebra.circuit_algebra import (
 from qnet.circuit_components.beamsplitter_cc import Beamsplitter
 from qnet.circuit_components.displace_cc import Displace
 
-import single_sided_node
+from . import single_sided_node_v1 as single_sided_node
 
 
 def node_symbol(node_index):

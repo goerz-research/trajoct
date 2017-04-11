@@ -4,7 +4,7 @@ from sympy import symbols, sqrt
 
 from qnet.algebra.circuit_algebra import SLH, identity_matrix
 
-import single_sided_node
+from . import single_sided_node_v1 as single_sided_node
 
 
 def syms_ops(node_index, n_cavity):

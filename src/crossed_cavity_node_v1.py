@@ -7,7 +7,7 @@ from qnet.algebra.hilbert_space_algebra import LocalSpace
 from qnet.algebra.circuit_algebra import SLH, identity_matrix
 from qnet.algebra.operator_algebra import Destroy, LocalSigma
 
-from single_sided_node import dagger
+from .single_sided_node_v1 import dagger
 
 
 def syms_ops(node_index, n_cavity):

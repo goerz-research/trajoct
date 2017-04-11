@@ -1,7 +1,7 @@
 """Construct a network of nodes, where each node is as in
 `crossed_sided_node.py`"""
-import crossed_cavity_node
-import double_sided_network
+from . import crossed_cavity_node_v1 as crossed_cavity_node
+from . import double_sided_network_v1 as double_sided_network
 
 
 def network_circuit(n_nodes, topology='open'):

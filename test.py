@@ -1,17 +1,20 @@
 """Tests of basic functionality"""
 from textwrap import dedent
-from shwrapper import qdyn_check_config
-import pytest
 from copy import copy
 from collections import OrderedDict
-import single_sided_network
-import crossed_cavity_network
-import qdyn_model
+
 import numpy as np
 from sympy import Symbol
 import QDYN
 from QDYN.pulse import blackman
 from qnet.algebra.hilbert_space_algebra import LocalSpace, ProductSpace
+
+import pytest
+
+from src.shwrapper_v1 import qdyn_check_config
+import src.qdyn_model_v1 as qdyn_model
+import src.single_sided_network_v1 as single_sided_network
+import src.crossed_cavity_network_v1 as crossed_cavity_network
 
 
 @pytest.fixture
@@ -342,8 +345,8 @@ def test_crossed_cavity_slh():
 
 def test_logical_2q_state():
     """Test construction of logical states"""
-    from qdyn_model import logical_2q_state, state
-    import single_sided_network
+    from src.qdyn_model_v1 import logical_2q_state, state
+    from src import single_sided_network_v1 as single_sided_network
 
     slh = single_sided_network.network_slh(
         n_cavity=5, n_nodes=2, topology='open')
