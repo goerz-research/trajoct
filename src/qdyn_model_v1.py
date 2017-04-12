@@ -4,6 +4,7 @@ controls"""
 from os.path import join
 from glob import glob
 from collections import OrderedDict
+from itertools import combinations
 import shutil
 
 import qutip
@@ -97,32 +98,37 @@ def dicke_state(space, fmt='qutip', excitations=1):
     For example for a Hilbert space ``('q1', 'c1', 'q2', 'c2', 'q3', 'c3')``,
     the Dicke state is ``(|000010> + |001000> + |100000>) / sqrt(3)``
     """
-    assert excitations == 1
     res = None
     labels = [ls.label for ls in space.local_factors]
     n_nodes = len([l for l in labels if l.startswith('q')])
-    for i_node in range(n_nodes):
-        label = 'q%d' % (i_node + 1)
-        qnums = [1 if l == label else 0 for l in labels]
+    n_terms = 0
+    for excited_qubits in combinations(range(n_nodes), excitations):
+        excited_labels = ["q%d" % (i+1) for i in excited_qubits]
+        qnums = [1 if label in excited_labels else 0 for label in labels]
+        assert np.sum(qnums) == excitations
         if res is None:
             res = state(space, *qnums, fmt=fmt)
         else:
             res += state(space, *qnums, fmt=fmt)
-    return res / np.sqrt(n_nodes)
+        n_terms += 1
+    return res / np.sqrt(float(n_terms))
 
 
 def dicke_init_state(space, fmt='qutip', excitations=1):
     """Return the the state of the first $n$ nodes are in the excited states,
-    wheren $n$ is given by `excitations`
-    """
+    wheren $n$ is given by `excitations`. That is, a separable state that we
+    indend to bring to an (entangled) Dicke state with the same excitation
+    number"""
     labels = [ls.label for ls in space.local_factors]
     qnums = []
+    exc = excitations  # modifiable copy
     for label in labels:
-        if label.startswith('q') and excitations > 0:
+        if label.startswith('q') and exc > 0:
             qnums.append(1)
-            excitations = excitations - 1
+            exc = exc - 1
         else:
             qnums.append(0)
+    assert np.sum(qnums) == excitations
     return state(space, *qnums, fmt=fmt)
 
 
@@ -383,10 +389,10 @@ def make_qdyn_oct_model(
     dicke_1 = dicke_state(hs, excitations=1)
     dicke_init_half = dicke_init_state(hs, excitations=(n_nodes//2))
     dicke_init_full = dicke_init_state(hs, excitations=(n_nodes))
-    #dicke_half = dicke_state(hs, excitations=(n_nodes//2))  # TODO
+    dicke_half = dicke_state(hs, excitations=(n_nodes//2))
     states = OrderedDict(
         [('00', psi00), ('01', psi01), ('10', psi10), ('11', psi11),
-         ('dicke_init_half', dicke_init_half),
+         ('dicke_init_half', dicke_init_half), ('dick_half', dicke_half),
          ('dicke_init_full', dicke_init_full), ('dicke_1', dicke_1)])
 
     model = make_qdyn_model(

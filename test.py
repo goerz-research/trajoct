@@ -221,6 +221,9 @@ def test_no_feedback_oct_fw_system(model_no_fb_oct_fw, tmpdir):
     * type = file, filename = psi_dicke_init_half.dat, label = dicke_init_half
 
     psi:
+    * type = file, filename = psi_dick_half.dat, label = dick_half
+
+    psi:
     * type = file, filename = psi_dicke_init_full.dat, label = dicke_init_full
 
     psi:
@@ -314,6 +317,9 @@ def test_no_feedback_oct_gate_system(model_no_fb_oct_gate, tmpdir):
     * type = file, filename = psi_dicke_init_half.dat, label = dicke_init_half
 
     psi:
+    * type = file, filename = psi_dick_half.dat, label = dick_half
+
+    psi:
     * type = file, filename = psi_dicke_init_full.dat, label = dicke_init_full
 
     psi:
@@ -357,9 +363,30 @@ def test_logical_2q_state():
     assert logical_2q_state(hs, 1, 0) == state(hs, 1, 0, 0, 0)
     assert logical_2q_state(hs, 1, 1) == state(hs, 1, 0, 1, 0)
 
+    hs = ProductSpace(
+          LocalSpace('q1', dimension=2), LocalSpace('c1', dimension=2),
+          LocalSpace('q2', dimension=2), LocalSpace('c2', dimension=2),
+          LocalSpace('q3', dimension=2), LocalSpace('c3', dimension=2))
+
+    assert logical_2q_state(hs, 0, 0) == state(hs, 0, 0, 0, 0, 0, 0)
+    assert logical_2q_state(hs, 0, 1) == state(hs, 0, 0, 0, 0, 1, 0)
+    assert logical_2q_state(hs, 1, 0) == state(hs, 1, 0, 0, 0, 0, 0)
+    assert logical_2q_state(hs, 1, 1) == state(hs, 1, 0, 0, 0, 1, 0)
+
+    hs = ProductSpace(
+          LocalSpace('q1', dimension=2), LocalSpace('c1', dimension=2),
+          LocalSpace('d1', dimension=2),
+          LocalSpace('q2', dimension=2), LocalSpace('c2', dimension=2),
+          LocalSpace('d2', dimension=2))
+
+    assert logical_2q_state(hs, 0, 0) == state(hs, 0, 0, 0, 0, 0, 0)
+    assert logical_2q_state(hs, 0, 1) == state(hs, 0, 0, 0, 1, 0, 0)
+    assert logical_2q_state(hs, 1, 0) == state(hs, 1, 0, 0, 0, 0, 0)
+    assert logical_2q_state(hs, 1, 1) == state(hs, 1, 0, 0, 1, 0, 0)
+
 
 def test_dicke1_state():
-    """Test the creation of the Dicke state"""
+    """Test single-excitation dicke state"""
     hs = ProductSpace(
           LocalSpace('q1', dimension=2), LocalSpace('c1', dimension=2),
           LocalSpace('q2', dimension=2), LocalSpace('c2', dimension=2),
@@ -369,3 +396,66 @@ def test_dicke1_state():
                    qdyn_model.state(hs, 1, 0, 0, 0, 0, 0)) / np.sqrt(3)
     assert (qdyn_model.dicke_state(hs, excitations=1) -
             dicke_state).norm() < 1e-12
+
+    hs = ProductSpace(
+          LocalSpace('q1', dimension=2), LocalSpace('c1', dimension=2),
+          LocalSpace('d1', dimension=2),
+          LocalSpace('q2', dimension=2), LocalSpace('c2', dimension=2),
+          LocalSpace('d2', dimension=2))
+    dicke_state = (qdyn_model.state(hs, 0, 0, 0, 1, 0, 0) +
+                   qdyn_model.state(hs, 1, 0, 0, 0, 0, 0)) / np.sqrt(2)
+    assert (qdyn_model.dicke_state(hs, excitations=1) -
+            dicke_state).norm() < 1e-12
+
+
+def test_dicke_init1_state():
+    """Test initial state with 1 exctation"""
+    hs = ProductSpace(
+          LocalSpace('q1', dimension=2), LocalSpace('c1', dimension=2),
+          LocalSpace('q2', dimension=2), LocalSpace('c2', dimension=2),
+          LocalSpace('q3', dimension=2), LocalSpace('c3', dimension=2))
+    init_state = qdyn_model.state(hs, 1, 0, 0, 0, 0, 0)
+    assert (qdyn_model.dicke_init_state(hs, excitations=1) -
+            init_state).norm() < 1e-12
+
+
+def test_dicke_half_state():
+    """Test dicke state with N/2 excitations"""
+    hs = ProductSpace(
+          LocalSpace('q1', dimension=2), LocalSpace('c1', dimension=2),
+          LocalSpace('q2', dimension=2), LocalSpace('c2', dimension=2),
+          LocalSpace('q3', dimension=2), LocalSpace('c3', dimension=2),
+          LocalSpace('q4', dimension=2), LocalSpace('c4', dimension=2))
+    #                                  q1     q2    q3    q4
+    dicke_state = (qdyn_model.state(hs, 1, 0, 1, 0, 0, 0, 0, 0) +
+                   qdyn_model.state(hs, 1, 0, 0, 0, 1, 0, 0, 0) +
+                   qdyn_model.state(hs, 1, 0, 0, 0, 0, 0, 1, 0) +
+                   qdyn_model.state(hs, 0, 0, 1, 0, 1, 0, 0, 0) +
+                   qdyn_model.state(hs, 0, 0, 1, 0, 0, 0, 1, 0) +
+                   qdyn_model.state(hs, 0, 0, 0, 0, 1, 0, 1, 0)) / np.sqrt(6)
+    assert (qdyn_model.dicke_state(hs, excitations=2) -
+            dicke_state).norm() < 1e-12
+
+
+def test_dicke_init_half_state():
+    """Test initial state with N/2 exctations"""
+    hs = ProductSpace(
+          LocalSpace('q1', dimension=2), LocalSpace('c1', dimension=2),
+          LocalSpace('q2', dimension=2), LocalSpace('c2', dimension=2),
+          LocalSpace('q3', dimension=2), LocalSpace('c3', dimension=2),
+          LocalSpace('q4', dimension=2), LocalSpace('c4', dimension=2))
+    init_state = qdyn_model.state(hs, 1, 0, 1, 0, 0, 0, 0, 0)
+    assert (qdyn_model.dicke_init_state(hs, excitations=2) -
+            init_state).norm() < 1e-12
+
+
+def test_dicke_full_state():
+    """Test dicke state with N exctations"""
+    # Note that the dicke state is separable in this case: it is the same as
+    # the 'init' state
+    hs = ProductSpace(
+          LocalSpace('q1', dimension=2), LocalSpace('c1', dimension=2),
+          LocalSpace('q2', dimension=2), LocalSpace('c2', dimension=2),
+          LocalSpace('q3', dimension=2), LocalSpace('c3', dimension=2))
+    assert (qdyn_model.dicke_state(hs, excitations=3) -
+            qdyn_model.dicke_init_state(hs, excitations=3)).norm() < 1e-12
