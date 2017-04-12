@@ -67,7 +67,8 @@ def network_slh(n_cavity, n_nodes, topology='open', inhom=False):
         α: (λ * Ω.conjugate() / (2 * sqrt(κ))),
     })
     slh = SLH(S, L, H)
-    if inhom:
-        return slh
-    else:
-        return move_drive_to_H(slh)
+    if not inhom:
+        slh = move_drive_to_H(slh)
+    slh.n_cavity = n_cavity
+    slh.n_nodes = n_nodes
+    return slh
