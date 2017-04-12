@@ -4,6 +4,7 @@ from copy import copy
 from collections import OrderedDict
 
 import numpy as np
+import sympy
 from sympy import Symbol
 import QDYN
 from QDYN.pulse import blackman
@@ -15,6 +16,7 @@ from src.shwrapper_v1 import qdyn_check_config
 import src.qdyn_model_v1 as qdyn_model
 import src.single_sided_network_v1 as single_sided_network
 import src.crossed_cavity_network_v1 as crossed_cavity_network
+from src.guess_pulses_v1 import pi_pulse, zero_pulse
 
 
 @pytest.fixture
@@ -459,3 +461,50 @@ def test_dicke_full_state():
           LocalSpace('q3', dimension=2), LocalSpace('c3', dimension=2))
     assert (qdyn_model.dicke_state(hs, excitations=3) -
             qdyn_model.dicke_init_state(hs, excitations=3)).norm() < 1e-12
+
+
+def test_pi_pulse():
+    from sympy import pi, cos
+    a, b, E0, t, T, μ, t_π = sympy.symbols("a b E_0, t, T, mu, t_pi",
+                                           positive=True)
+    B_form = (E0 / 2) * (1 - a - cos(2 * pi * t / T) + a * cos(4 * pi * t / T))
+    a_blackman = 0.16
+    Ωeff_form = μ * (sympy.integrate(B_form, (t, 0, T)) / T).simplify()
+    t_pi_form = pi / (2 * Ωeff_form).subs({1-a: b})
+    # protect 1-a, so sympy doesn't do weird signs
+    E_pi_form = sympy.solve(t_pi_form - t_π, E0)[0].subs({b: 1-a})
+
+    tgrid_start = -100
+    tgrid_end = 100
+    nt = tgrid_end - tgrid_start + 1
+    tgrid = QDYN.pulse.pulse_tgrid(t0=tgrid_start, T=tgrid_end, nt=nt)
+
+    mu_1 = 0.005
+
+    E0 = sympy.N(E_pi_form.subs({t_π: 100, μ: mu_1, a: a_blackman}))
+
+    p1 = pi_pulse(tgrid, t_start=-50, t_stop=50, mu=float(mu_1), cycles=1)
+    assert (np.max(p1.amplitude) - E0) < 1e-12
+    assert p1.t0.unit == 'dimensionless'
+    assert abs(float(p1.t0) - (-100)) < 1e-12
+    assert abs(float(p1.T) - (100)) < 1e-12
+    assert len(p1.amplitude) == 200
+
+    p2 = pi_pulse(tgrid, t_start=-50, t_stop=50, mu=float(mu_1), cycles=2)
+    assert np.max(np.abs(2.0 * p1.amplitude - p2.amplitude)) < 1e-12
+    assert abs(float(p2.t0) - (-100)) < 1e-12
+    assert abs(float(p2.T) - (100)) < 1e-12
+
+
+def test_pi_zero():
+    tgrid_start = -100
+    tgrid_end = 100
+    nt = tgrid_end - tgrid_start + 1
+    tgrid = QDYN.pulse.pulse_tgrid(t0=tgrid_start, T=tgrid_end, nt=nt)
+
+    p = zero_pulse(tgrid)
+    assert np.max(p.amplitude) == 0.0
+    assert p.t0.unit == 'dimensionless'
+    assert abs(float(p.t0) - (-100)) < 1e-12
+    assert abs(float(p.T) - (100)) < 1e-12
+    assert len(p.amplitude) == 200
