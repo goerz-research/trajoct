@@ -392,7 +392,7 @@ def make_qdyn_oct_model(
     dicke_half = dicke_state(hs, excitations=(n_nodes//2))
     states = OrderedDict(
         [('00', psi00), ('01', psi01), ('10', psi10), ('11', psi11),
-         ('dicke_init_half', dicke_init_half), ('dick_half', dicke_half),
+         ('dicke_init_half', dicke_init_half), ('dicke_half', dicke_half),
          ('dicke_init_full', dicke_init_full), ('dicke_1', dicke_1)])
 
     model = make_qdyn_model(
