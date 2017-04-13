@@ -48,9 +48,10 @@ def show_summary_gate(rf, pulses='pulse*.oct.dat', single_node=False, xrange=Non
     plt.show(fig)
 
 
-def show_summary_dicke(rf, pulses='pulse*.oct.dat', single_node=False, xrange=None):
+def show_summary_dicke(
+        rf, pulses='pulse*.oct.dat', single_node=False, xrange=None, dpi=70):
     """Show plot of observables"""
-    fig = plt.figure(figsize=(16, 3.5), dpi=70)
+    fig = plt.figure(figsize=(16, 3.5), dpi=dpi)
 
     axs = []
 
