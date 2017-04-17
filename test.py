@@ -1,10 +1,12 @@
 """Tests of basic functionality"""
+from os.path import join
 from textwrap import dedent
 from copy import copy
 from collections import OrderedDict
 
 import numpy as np
 import sympy
+import scipy
 from sympy import Symbol
 import QDYN
 from QDYN.pulse import blackman
@@ -16,7 +18,8 @@ from src.shwrapper_v1 import qdyn_check_config
 import src.qdyn_model_v1 as qdyn_model
 import src.single_sided_network_v1 as single_sided_network
 import src.crossed_cavity_network_v1 as crossed_cavity_network
-from src.guess_pulses_v1 import pi_pulse, zero_pulse
+from src.dicke_half_model_v1 import (
+    pi_pulse, zero_pulse, write_dicke_half_model)
 
 
 @pytest.fixture
@@ -223,7 +226,7 @@ def test_no_feedback_oct_fw_system(model_no_fb_oct_fw, tmpdir):
     * type = file, filename = psi_dicke_init_half.dat, label = dicke_init_half
 
     psi:
-    * type = file, filename = psi_dick_half.dat, label = dick_half
+    * type = file, filename = psi_dicke_half.dat, label = dicke_half
 
     psi:
     * type = file, filename = psi_dicke_init_full.dat, label = dicke_init_full
@@ -319,7 +322,7 @@ def test_no_feedback_oct_gate_system(model_no_fb_oct_gate, tmpdir):
     * type = file, filename = psi_dicke_init_half.dat, label = dicke_init_half
 
     psi:
-    * type = file, filename = psi_dick_half.dat, label = dick_half
+    * type = file, filename = psi_dicke_half.dat, label = dicke_half
 
     psi:
     * type = file, filename = psi_dicke_init_full.dat, label = dicke_init_full
@@ -508,3 +511,90 @@ def test_pi_zero():
     assert abs(float(p.t0) - (-100)) < 1e-12
     assert abs(float(p.T) - (100)) < 1e-12
     assert len(p.amplitude) == 200
+
+
+@pytest.mark.parametrize("T,theta,E0_cycles,mcwf,non_herm,lambda_a,n_nodes", [
+    #  T, theta, E0_cycles,  mcwf, non_herm, lambda_a, n_nodes
+    (200,     0,         2, False,    False,      1.0,       2),
+    (200,     0,         2, False,    False,     0.01,       2),
+    (200,     0,         2, False,     True,      1.0,       2),
+    (200,     0,         2,  True,    False,      1.0,       2),
+    (200,     0,         2,  True,     True,      1.0,       2),
+    (200,     0,         2,  True,     True,      1.0,       4),
+    (200,     0,         4,  True,     True,      1.0,       2),
+    (1000,    0,         2,  True,     True,      1.0,       2),
+    (200,  np.pi/4.0,    2,  True,     True,      1.0,       2),
+])
+def test_dicke_half_model(
+        tmpdir, T, theta, E0_cycles,  mcwf, non_herm, lambda_a, n_nodes):
+    """Test creation of model for dicke state"""
+
+    slh = single_sided_network.network_slh(
+        n_cavity=2, n_nodes=n_nodes, topology='driven_bs_fb')
+    rf = str(tmpdir)
+    write_dicke_half_model(
+        slh, rf, T=T, theta=theta, E0_cycles=E0_cycles, mcwf=mcwf,
+        non_herm=non_herm, lambda_a=lambda_a)
+
+    config = QDYN.config.read_config_file(join(rf, 'config'))
+    assert config['tgrid']['t_start'] == 0
+    assert float(config['tgrid']['t_stop']) == float(T)
+    assert len(config['pulse']) == n_nodes
+    for pulse_config in config['pulse']:
+        assert pulse_config['oct_lambda_a'] == lambda_a
+        if T < 400:
+            assert float(pulse_config['t_rise']) == 4.0
+            assert float(pulse_config['t_fall']) == 4.0
+        else:
+            assert abs(float(pulse_config['t_rise']) - 0.01 * float(T)) < 1e-10
+            assert abs(float(pulse_config['t_fall']) - 0.01 * float(T)) < 1e-10
+        assert not pulse_config['is_complex']
+    assert len(config['ham']) == n_nodes + 1
+    for ham_config in config['ham']:
+        assert ham_config['n_surf'] == 4**n_nodes
+    assert config['prop']['method'] == 'newton'
+    assert config['user_strings']['time_unit'] == 'dimensionless'
+    assert config['user_strings']['initial_states'] == 'dicke_init_half'
+    assert config['user_strings']['target_states'] == 'dicke_half'
+    assert config['user_strings']['state_label'] == 'dicke_init_half'
+
+    pulse = QDYN.pulse.Pulse.read(join(rf, config['pulse'][0]['filename']))
+    E0 = E0_cycles * 3.73961292 * 200 / T
+    assert abs(np.max(pulse.amplitude) - E0) < 1e-3
+
+    H0 = QDYN.io.read_indexed_matrix(join(rf, "H0.dat"))
+
+    if (mcwf, non_herm) == (False, False):
+        # density matrix propagation
+        assert len(config['dissipator']) == 1
+        assert config['dissipator'][0]['type'] == 'dissipator'
+        assert not config['prop']['use_mcwf']
+        assert config['user_logicals']['rho']
+        assert scipy.sparse.linalg.norm(H0 - H0.H) == 0.0
+    elif (mcwf, non_herm) == (False, True):
+        # non-Hermitian Hamiltonian
+        assert 'dissipator' not in config
+        assert not config['prop']['use_mcwf']
+        assert scipy.sparse.linalg.norm(H0 - H0.H) > 0
+    elif (mcwf, non_herm) == (True, True):
+        # MCWF with effective Hamiltonian pre-calculated
+        assert len(config['dissipator']) == 1
+        assert config['dissipator'][0]['type'] == 'lindblad_ops'
+        assert not config['dissipator'][0]['conv_to_superop']
+        assert 'add_to_H_jump' not in config['dissipator'][0]
+        assert config['prop']['use_mcwf']
+        assert scipy.sparse.linalg.norm(H0 - H0.H) > 0
+        L1 = QDYN.io.read_indexed_matrix(join(rf, "L1.dat"))
+        theta_pi = np.pi * theta
+        kappa_eff = (np.sqrt(2 * 0.01) * np.cos(theta_pi) /
+                     (1 - np.sin(theta_pi)))
+        assert (np.linalg.norm(L1.data - kappa_eff * np.ones(len(L1.data))) <
+                1e-12)
+    elif (mcwf, non_herm) == (True, False):
+        # MCWF with effective Hamiltonian calculated in QDYN
+        assert len(config['dissipator']) == 1
+        assert config['dissipator'][0]['type'] == 'lindblad_ops'
+        assert not config['dissipator'][0]['conv_to_superop']
+        assert config['dissipator'][0]['add_to_H_jump'] == 'indexed'
+        assert config['prop']['use_mcwf']
+        assert scipy.sparse.linalg.norm(H0 - H0.H) == 0
