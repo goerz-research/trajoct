@@ -283,18 +283,22 @@ def make_qdyn_model(
             lindblad_unit = 'sqrt_%s' % energy_unit
             if energy_unit in ['dimensionless', 'unitless', 'iu']:
                 lindblad_unit = energy_unit
-            model.add_lindblad_op(L, op_unit=lindblad_unit,
-                                  add_to_H_jump='indexed',
-                                  conv_to_superop=False)
+            if non_herm:
+                # We precompute the effective Hamiltonian
+                model.add_lindblad_op(L, op_unit=lindblad_unit,
+                                      conv_to_superop=False)
+            else:
+                # QDYN determines the effective Hamiltonian internally
+                model.add_lindblad_op(L, op_unit=lindblad_unit,
+                                      add_to_H_jump='indexed',
+                                      conv_to_superop=False)
         if non_herm:
-            # We precompute the effective Hamiltonian
             model.add_ham(H0_eff(H0, Ls), op_unit=energy_unit,
                           op_type='potential')
             model.set_propagation(
                 T=T, nt=nt, t0=t0, time_unit=time_unit, prop_method='newton',
                 use_mcwf=True, mcwf_order=2, construct_mcwf_ham=False)
         else:
-            # QDYN determines the effective Hamiltonian internally
             model.add_ham(H0, op_unit=energy_unit, op_type='potential')
             model.set_propagation(
                 T=T, nt=nt, t0=t0, time_unit=time_unit, prop_method='newton',
