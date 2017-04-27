@@ -5,6 +5,7 @@ from os.path import join
 from glob import glob
 from collections import OrderedDict
 from itertools import combinations
+import re
 import shutil
 
 import qutip
@@ -546,3 +547,37 @@ def prepare_rf_prop(model, rf_oct, *rf_prop, oct_pulses='pulse*.oct.dat'):
         model.write_to_runfolder(rf)
         for file in glob(join(rf_oct, oct_pulses)):
             shutil.copy(file, rf)
+
+
+def pulses_uptodate(rf, verbose=False):
+    """Return True if all optimized pulses in the given runfolder
+    are converged or have reached the max number of iterations, False
+    otherwise.
+
+    This routine can be used as an 'uptodate' callable for a pydoit
+    optimization task.
+    """
+    config = QDYN.config.read_config_file(join(rf, 'config'))
+    for pulse_config in config['pulse']:
+        pulse_oct_file = join(rf, pulse_config['oct_outfile'])
+        try:
+            p = QDYN.pulse.Pulse.read(pulse_oct_file)
+        except OSError:
+            if verbose:
+                print("    pulse %s does not exist" % pulse_oct_file)
+            return False
+        if p.oct_iter < config['oct']['iter_stop']:
+            m = re.search(r'J_T\s*=\s*([0-9E.+-]+)', "".join(p.preamble))
+            if verbose:
+                print("    pulse %s has too few iterations %d"
+                      % (pulse_oct_file, p.oct_iter))
+            if float(m.group(1)) > config['oct']['J_T_conv']:
+                if verbose:
+                    print("    pulse %s is not converged" % pulse_oct_file)
+                return False
+            else:
+                if verbose:
+                    print("    pulse %s is converged" % pulse_oct_file)
+        if verbose:
+            print("    pulse %s is up to date" % pulse_oct_file)
+    return True
