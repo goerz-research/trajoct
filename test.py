@@ -20,6 +20,8 @@ import src.single_sided_network_v1 as single_sided_network
 import src.crossed_cavity_network_v1 as crossed_cavity_network
 from src.dicke_half_model_v1 import (
     pi_pulse, zero_pulse, write_dicke_half_model)
+from src.dicke_half_model_v2 import (
+    write_dicke_half_model as write_dicke_half_model_v2)
 
 
 @pytest.fixture
@@ -598,3 +600,25 @@ def test_dicke_half_model(
         assert config['dissipator'][0]['add_to_H_jump'] == 'indexed'
         assert config['prop']['use_mcwf']
         assert scipy.sparse.linalg.norm(H0 - H0.H) == 0
+
+
+def test_complex_dick_half_model(tmpdir):
+    """Test that we can create a dicke model with complex pulse amplitudes"""
+    T = 200
+    theta = 0
+    E0_cycles = 2
+    mcwf = True
+    non_herm = True
+    lambda_a = 1.0
+    n_nodes = 2
+
+    slh = single_sided_network.network_slh(
+        n_cavity=2, n_nodes=n_nodes, topology='driven_bs_fb')
+    rf = str(tmpdir)
+    write_dicke_half_model_v2(
+        slh, rf, T=T, theta=theta, E0_cycles=E0_cycles, mcwf=mcwf,
+        non_herm=non_herm, lambda_a=lambda_a, complex_pulses=True)
+
+    config = QDYN.config.read_config_file(join(rf, 'config'))
+    for pulse_config in config['pulse']:
+        assert pulse_config['is_complex']

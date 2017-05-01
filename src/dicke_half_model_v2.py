@@ -29,6 +29,7 @@ def pi_pulse(tgrid, t_start, t_stop, mu, cycles=1):
         tgrid, amplitude=(cycles * E0 * blackman(tgrid, t_start, t_stop)),
         time_unit='dimensionless', ampl_unit='dimensionless',
         freq_unit='dimensionless')
+    assert not pulse.is_complex
     return pulse
 
 
@@ -38,6 +39,7 @@ def zero_pulse(tgrid):
         tgrid, amplitude=(0.0 * tgrid),
         time_unit='dimensionless', ampl_unit='dimensionless',
         freq_unit='dimensionless')
+    assert not pulse.is_complex
     return pulse
 
 
@@ -89,7 +91,7 @@ def dicke_guess_controls(slh, theta, T, E0_cycles=2, nt=None, kappa=0.01):
 def write_dicke_half_model(
         slh, rf, T, theta=0, E0_cycles=2, mcwf=False, non_herm=False,
         lambda_a=1.0, J_T_conv=1e-4, iter_stop=5000, nt=None,
-        max_ram_mb=100000, kappa=0.01):
+        max_ram_mb=100000, kappa=0.01, complex_pulses=False):
     """Write model to the given runfolder,
 
     Args:
@@ -116,6 +118,7 @@ def write_dicke_half_model(
         nt (int): Number of time step (1 per time unit if None)
         max_ram_mb (int): MB of RAM to use for storing propagated states
         kappa (float): local decay rate of each node
+        complex_puses (bool): If True, allow for complex pulse shapes
 
     Note:
 
@@ -134,6 +137,12 @@ def write_dicke_half_model(
     n_nodes = slh.n_nodes
     controls = dicke_guess_controls(slh=slh, theta=theta, T=T,
                                     E0_cycles=E0_cycles, nt=nt, kappa=kappa)
+    for pulse in controls.values():
+        assert not pulse.is_complex
+        if complex_pulses:
+            pulse.amplitude = np.array(pulse.amplitude, dtype=np.complex128)
+            assert pulse.is_complex
+
     qdyn_model = make_qdyn_oct_model(
         slh, num_vals=num_vals(theta=theta, n_nodes=n_nodes, kappa=kappa),
         controls=controls, energy_unit='dimensionless',
