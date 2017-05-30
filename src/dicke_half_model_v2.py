@@ -81,6 +81,10 @@ def dicke_guess_controls(slh, theta, T, E0_cycles=2, nt=None, kappa=0.01):
     t_rise = UnitFloat(max(0.01 * T, 4*dt), 'dimensionless')
     pulse_sideband = pi_pulse(tgrid, t_start=tgrid_start, t_stop=tgrid_end,
                               mu=mu_1, cycles=E0_cycles)
+    E0 = UnitFloat(
+        np.max(np.abs(pulse_sideband.amplitude)),
+        pulse_sideband.ampl_unit)
+    pulse_sideband.config_attribs['E_0'] = E0
     pulse_sideband.config_attribs['t_rise'] = t_rise
     pulse_sideband.config_attribs['t_fall'] = t_rise
     for ctrl_sym in [Symbol('Omega_%d' % ind) for ind in range(1, n_nodes+1)]:
