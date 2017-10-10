@@ -1,5 +1,6 @@
 """Wrappers for actions in pydoit tasks"""
 import os
+from glob import glob
 from os.path import join
 import subprocess
 
@@ -22,13 +23,27 @@ def run_traj_oct(rf, n_trajs, wait=False):
                 pid_fh.write(str(proc.pid))
 
 
-def run_traj_prop(rf, n_trajs):
+def run_traj_prop(rf, n_trajs, n_procs=None, use_oct_pulses=True):
     """Run propagation"""
     env = os.environ.copy()
     env['OMP_NUM_THREADS'] = '1'
-    cmd = ['mpirun', '-n', str(int(n_trajs)), 'qdyn_prop_traj',
-           '--n-trajs=%s' % int(n_trajs), '--use-oct-pulses',
-           '--write-final-state=state_final.dat', '.']
+    if n_procs is None:
+        n_procs = int(n_trajs)
+    if use_oct_pulses:
+        use_oct_pulses_arg = ['--use-oct-pulses']
+    else:
+        use_oct_pulses_arg = []
+    if n_procs > 1:
+        cmd = (['mpirun', '-n', str(n_procs), 'qdyn_prop_traj',
+                '--n-trajs=%s' % int(n_trajs)] + use_oct_pulses_arg +
+               ['--write-final-state=state_final.dat', '.'])
+    else:
+        cmd = (['qdyn_prop_traj', ] + use_oct_pulses_arg +
+               ['--write-final-state=state_final.dat', '.'])
+    files_to_delete = glob(join(rf, 'state_final.dat.*'))
+    files_to_delete.extend(glob(join(rf, 'jump_record.dat.*')))
+    for file in files_to_delete:
+        os.unlink(file)
     with open(join(rf, 'prop.log'), 'wb') as log_fh:
         subprocess.call(
             cmd, env=env, stdout=log_fh, stderr=subprocess.STDOUT, cwd=rf)
