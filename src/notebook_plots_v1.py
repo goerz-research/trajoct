@@ -10,14 +10,25 @@ import sympy
 from sympy import Symbol
 from IPython.display import display, Latex
 from qnet.printing import tex
-from qnet.algebra import pattern, wc, ScalarTimesOperator
+from qnet.algebra import pattern, ScalarTimesOperator
 
 import QDYN
 
 from .algebra_v1 import split_hamiltonian
+from .pulse_smoothing_v1 import pulse_delta_smoothing
 
 
-def show_summary_gate(rf, pulses='pulse*.oct.dat', single_node=False, xrange=None):
+SUBSCRIPT_MAPPING = {
+    '0': '₀', '1': '₁', '2': '₂', '3': '₃', '4': '₄', '5': '₅', '6': '₆',
+    '7': '₇', '8': '₈', '9': '₉', '(': '₍', ')': '₎', '+': '₊', '-': '₋',
+    '=': '₌', 'a': 'ₐ', 'e': 'ₑ', 'o': 'ₒ', 'x': 'ₓ', 'h': 'ₕ', 'k': 'ₖ',
+    'l': 'ₗ', 'm': 'ₘ', 'n': 'ₙ', 'p': 'ₚ', 's': 'ₛ', 't': 'ₜ',
+    'β': 'ᵦ', 'γ': 'ᵧ', 'ρ': 'ᵨ', 'φ': 'ᵩ', 'χ': 'ᵪ'
+}
+
+
+def show_summary_gate(
+        rf, pulses='pulse*.oct.dat', single_node=False, xrange=None):
     """Show plot of observables"""
     fig = plt.figure(figsize=(16, 3.5), dpi=70)
 
@@ -171,7 +182,8 @@ def display_hamiltonian(H):
 
     lines = []
     lines.append(r'\begin{align}')
-    lines.append(r'  \hat{H} &= %s\\' % " + ".join([label(name) for name in terms.keys()]))
+    lines.append(r'  \hat{H} &= %s\\' % " + ".join(
+        [label(name) for name in terms.keys()]))
     for name, H in terms.items():
         lines.append(r'  %s &= %s\\' % (label(name), tex(H)))
     lines.append(r'\end{align}')
@@ -237,3 +249,144 @@ def plot_bs_decay(L):
     ax.set_xlabel(r'BS mixing angle $\theta$ ($\pi$ rad)')
     ax.set_ylabel(r'decay rate (\sqrt(2\kappa)')
     plt.show(fig)
+
+
+def monotonic_convergence(iter, J_T):
+    iter_out = []
+    J_T_out = []
+    J_T_prev = None
+    for iter_val, J_T_val in zip(iter, J_T):
+        if J_T_prev is not None:
+            if J_T_prev < J_T_val:
+                continue  # drop
+        iter_out.append(iter_val)
+        J_T_out.append(J_T_val)
+        J_T_prev = J_T_val
+    return iter_out, J_T_out
+
+
+def plot_convergence_comparison(runfolders, monotonic=False, xlim=None):
+    conv = QDYN.octutils.OCTConvergences()
+    for rf in runfolders:
+        try:
+            conv.load_file(
+                rf.split('/')[-1],
+                join(rf, 'oct_iters.dat'))
+        except FileNotFoundError:
+            pass
+    fig, ax = plt.subplots(figsize=(10, 6))
+    for (key, data) in conv.data.items():
+        if monotonic:
+            ax.plot(*monotonic_convergence(data.iter, data.J_T), label=key)
+        else:
+            ax.plot(data.iter, data.J_T, label=key)
+    ax.legend()
+    ax.set_yscale('log')
+    ax.set_xlabel("iteration")
+    ax.set_ylabel("error")
+    if xlim is not None:
+        ax.set_xlim(xlim)
+    plt.show(fig)
+
+
+def plot_rho_prop_error_comparison(runfolders, xlim=None):
+    fig, ax = plt.subplots(figsize=(10, 6))
+    for rf in runfolders:
+        key = rf.split('/')[-1]
+        oct_iter, err = np.genfromtxt(
+            join(rf, 'rho_prop_error.dat'), unpack=True)
+        ax.plot(oct_iter, err, label=key)
+    ax.legend()
+    ax.set_yscale('log')
+    ax.set_xlabel("iteration")
+    ax.set_ylabel("error")
+    if xlim is not None:
+        ax.set_xlim(xlim)
+    plt.show(fig)
+
+
+def plot_pulse_comparison(runfolders):
+    ncols = 3
+    nrows = len(runfolders) // ncols
+    if ncols * nrows < len(runfolders):
+        nrows += 1
+    fig, axs = plt.subplots(
+        figsize=(16, nrows*5), ncols=ncols, nrows=nrows, squeeze=False)
+    axs = axs.flatten()
+    for i, rf in enumerate(runfolders):
+        ax = axs[i]
+        pulse1 = QDYN.pulse.Pulse.read(join(rf, 'pulse1.oct.dat'))
+        pulse2 = QDYN.pulse.Pulse.read(join(rf, 'pulse2.oct.dat'))
+        pulse1.render_pulse(ax, label=r'pulse 1')
+        pulse2.render_pulse(ax, label=r'pulse 2')
+        ax.legend()
+        ax.set_xlabel("time")
+        ax.set_ylabel("amplitude")
+        ax.set_title(rf.split('/')[-1])
+    plt.show(fig)
+
+
+def render_pulse_delta_smoothing(
+        ax, rf, smooth_pulse, pulse_ids=(1, 2), labels=None, **kwargs):
+    if labels is not None:
+        labels = list(labels)
+    pulses = [
+        QDYN.pulse.Pulse.read(join(rf, 'pulse%d.oct.dat' % id))
+        for id in pulse_ids]
+    delta_pulses = pulse_delta_smoothing(pulses, smooth_pulse, **kwargs)
+    for id, delta_pulse in zip(pulse_ids, delta_pulses):
+        if labels is None:
+            label = r'Δ' + SUBSCRIPT_MAPPING[str(id)]
+        else:
+            label = labels.pop(0)
+        delta_pulse.render_pulse(ax, label=label)
+    ax.legend()
+    ax.set_xlabel("time")
+    ax.set_ylabel("noise amplitude")
+    ax.set_title(rf.split('/')[-1])
+
+
+def plot_pulse_delta_smoothing(runfolders, smooth_pulse, **kwargs):
+    """Plot pulses relative to smooth version of itself"""
+    ncols = 3
+    nrows = len(runfolders) // ncols
+    if ncols * nrows < len(runfolders):
+        nrows += 1
+    fig, axs = plt.subplots(
+        figsize=(16, nrows*5), ncols=ncols, nrows=nrows, squeeze=False)
+    axs = axs.flatten()
+    for i, rf in enumerate(runfolders):
+        ax = axs[i]
+        render_pulse_delta_smoothing(ax, rf, smooth_pulse, **kwargs)
+    plt.show(fig)
+
+
+def collect_noise_table(runfolders, smooth_pulse, **kwargs):
+    noise1 = []  # pulse 1
+    noise2 = []  # pulse 2
+    ntrajs = []
+    for rf in runfolders:
+        ntrajs.append(int(rf.split('ntrajs')[-1]))
+        pulse1 = QDYN.pulse.Pulse.read(join(rf, 'pulse1.oct.dat'))
+        pulse2 = QDYN.pulse.Pulse.read(join(rf, 'pulse2.oct.dat'))
+        delta1, delta2 = pulse_delta_smoothing(
+            [pulse1, pulse2], smooth_pulse, **kwargs)
+        dt = pulse1.tgrid[1] - pulse1.tgrid[0]
+        pulse1_noise = sum(np.abs(delta1.amplitude)) * dt
+        pulse2_noise = sum(np.abs(delta2.amplitude)) * dt
+        noise1.append(pulse1_noise)
+        noise2.append(pulse2_noise)
+    return pd.DataFrame(
+        data=OrderedDict(
+            [('ν1', noise1), ('ν2', noise2), ('rf', runfolders)]),
+        index=ntrajs)
+
+
+def combine_noise_tables(noise_tables, labels):
+    return (
+        pd.concat(
+            [df[['ν1', 'ν2']].rename(
+                columns={'ν1': 'ν1 ' + label, 'ν2': 'ν2 ' + label})
+             for (df, label) in zip(noise_tables, labels)],
+            axis=1)
+        .dropna())
