@@ -9,7 +9,7 @@ from qnet.algebra.operator_algebra import (
         Jplus, Jminus, Phase, Displace, Squeeze, LocalSigma, OperatorOperation,
         OperatorPlus, OperatorTimes, ScalarTimesOperator, Adjoint,
         PseudoInverse, OperatorTrace, NullSpaceProjector, Operation, Operator,
-        LocalProjector)
+        LocalProjector, LocalOperator)
 from qnet.algebra.state_algebra import (
         Ket, BraKet, KetBra, BasisKet, CoherentStateKet, KetPlus, TensorKet,
         ScalarTimesKet, OperatorTimesKet)
@@ -72,6 +72,9 @@ def convert_to_single_excitation_qutip(
             return qutip.qeye(qutip_dimension)
     elif expr is ZeroOperator:
         return qutip.Qobj(csr_matrix((qutip_dimension, qutip_dimension)))
+    elif isinstance(expr, LocalOperator):
+        return _convert_local_operator_to_qutip(
+            expr, bit_index, full_space, mapping)
     elif isinstance(expr, OperatorOperation):
         return _convert_operator_operation_to_qutip(
             expr, bit_index, full_space, mapping)
@@ -97,15 +100,15 @@ def convert_to_single_excitation_qutip(
 
 
 def construct_bit_index(full_space):
-    """Return the bit-index for the single-excitation subspace"""
+    """Return the bit-index for the zero/single-excitation subspace"""
     N = len(full_space.local_factors)
     zero = bitarray(N)
     zero.setall(0)
-    bit_index = {}
+    bit_index = {zero.to01(): 0}  # zero excitation subspace
     for (i, hs) in enumerate(reversed(full_space.local_factors)):
         key = copy(zero)
         key[N-i-1] = 1
-        bit_index[key.to01()] = i
+        bit_index[key.to01()] = i+1
     return bit_index
 
 
@@ -142,8 +145,8 @@ _PAT_SHIFT_OP = pattern(
         'hs': wc('hs2', head=LocalSpace)}))
 
 
-def _qutip_sigma(hs1, hs2, full_space, N_nodes, bit_index):
-    N = N_nodes
+def _qutip_sigma(hs1, hs2, full_space, bit_index):
+    N = len(bit_index)
     key1 = bit_key(hs1, full_space).to01()
     key2 = bit_key(hs2, full_space).to01()
     res = (
@@ -153,8 +156,6 @@ def _qutip_sigma(hs1, hs2, full_space, N_nodes, bit_index):
 
 
 def _convert_operator_operation_to_qutip(expr, bit_index, full_space, mapping):
-    N = len(full_space.local_factors)
-    bit_index = construct_bit_index(full_space)
     if isinstance(expr, OperatorPlus):
         res = 0
         for op in expr.operands:
@@ -164,19 +165,29 @@ def _convert_operator_operation_to_qutip(expr, bit_index, full_space, mapping):
     elif isinstance(expr, OperatorTimes):
         m = _PAT_ADAG_A.match(expr)
         if m:
-            return _qutip_sigma(m['hs1'], m['hs2'], full_space, N, bit_index)
+            return _qutip_sigma(m['hs1'], m['hs2'], full_space, bit_index)
         m = _PAT_A_ADAG.match(expr)
         if m:
-            return _qutip_sigma(m['hs2'], m['hs1'], full_space, N, bit_index)
+            return _qutip_sigma(m['hs2'], m['hs1'], full_space, bit_index)
         m = _PAT_SHIFT_OP.match(expr)
         if m:
-            return _qutip_sigma(m['hs1'], m['hs2'], full_space, N, bit_index)
+            return _qutip_sigma(m['hs1'], m['hs2'], full_space, bit_index)
         raise NotImplementedError(
             'Cannot convert operators other than â^† â: %s' % expr)
     elif isinstance(expr, Adjoint):
         return convert_to_single_excitation_qutip(
             qutip.dag(expr.operands[0]), bit_index, full_space,
             mapping=mapping)
+    else:
+        raise ValueError("Cannot convert '%s' of type %s"
+                         % (str(expr), type(expr)))
+
+
+def _convert_local_operator_to_qutip(expr, bit_index, full_space, mapping):
+    if isinstance(expr, Destroy):
+        N = len(bit_index)
+        key = bit_key(expr.space, full_space).to01()
+        return qutip.basis(N, 0) * qutip.basis(N, bit_index[key]).dag()
     else:
         raise ValueError("Cannot convert '%s' of type %s"
                          % (str(expr), type(expr)))
