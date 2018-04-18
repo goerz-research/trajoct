@@ -68,8 +68,6 @@ dependencies:
 - gevent=1.2.1=py36_0
 - glib=2.50.2=1
 - greenlet=0.4.12=py36_0
-- gst-plugins-base=1.8.0=0
-- gstreamer=1.8.0=0
 - h5py=2.7.0=np112py36_0
 - harfbuzz=0.9.39=2
 - hdf5=1.8.17=1
@@ -96,7 +94,6 @@ dependencies:
 - jupyter_core=4.3.0=py36_0
 - lazy-object-proxy=1.2.2=py36_0
 - libffi=3.2.1=1
-- libgcc=5.2.0=0
 - libgfortran=3.0.0=1
 - libiconv=1.14=0
 - libpng=1.6.27=0
@@ -172,7 +169,6 @@ dependencies:
 - pywavelets=0.5.2=np112py36_0
 - pyyaml=3.12=py36_0
 - pyzmq=16.0.2=py36_0
-- qt=5.6.2=4
 - qtawesome=0.4.4=py36_0
 - qtconsole=4.3.0=py36_0
 - qtpy=1.2.1=py36_0
@@ -225,16 +221,9 @@ dependencies:
 - zict=0.1.2=py36_0
 - zlib=1.2.8=3
 - pip:
-  - apipkg==1.4
-  - argh==0.26.2
-  - backports.shutil-get-terminal-size==1.0.0
   - better-apidoc==0.1.2
-  - clusterjob (/home/goerz/Documents/Programming/clusterjob)==2.0.0.dev0
+  - git+https://github.com/goerz/clusterjob.git@f2ccfa78ff94513f80f6994d75cc205227ea9150#egg=clusterjob-2.0.0-dev
   - doit==0.30.3
-  - dropbox==8.0.0
-  - et-xmlfile==1.0.1
-  - execnet==1.4.1
-  - fmtlatex==0.0.0
   - ipython-genutils==0.2.0
   - jupyter-client==5.0.1
   - jupyter-console==5.1.0
@@ -245,33 +234,16 @@ dependencies:
   - jupyter-latex-envs==1.3.8.2
   - jupyter-nbextensions-configurator==0.2.7
   - jupyterthemes==0.17.8
-  - lesscpy==0.12.0
-  - livereload==2.5.1
-  - mgplottools (/home/goerz/Documents/Programming/mgplottools)==1.0.0
+  - git+https://github.com/goerz/mgplottools.git@4a9b703bad161fce31f6d7b3324c409b4f602338#egg=mgplottools-1.0.0
   - nbdiff==1.0.3
   - nbdime==0.2.0
-  - neovim==0.1.13
   - notedown==1.5.0
   - pandoc-attributes==0.1.7
   - pathtools==0.1.2
   - port-for==0.3.1
   - prompt-toolkit==1.0.14
-  - pyinotify==0.9.6
-  - pytest-capturelog==0.7
-  - pytest-cov==2.4.0
-  - pytest-xdist==1.15.0
-  - python-levenshtein==0.12.0
   - pyx==0.14.1
-  - qdyn (/home/goerz/Documents/Programming/qdynpylib)==0.3.0
-  - qnet (/home/goerz/Documents/Programming/QNET)==1.4.3
+  - git+https://github.com/goerz/qdynpylib.git@90e3f869f81f206c1da5003cac6115291975b14c#egg=qdyn-0.3.0
+  - git+https://github.com/mabuchilab/QNET.git@06b6ded04901f0131e212be21f72b37384b5f194#egg=QNET-2.0.0-dev
   - qutip==4.2.0
-  - rope-py3k==0.9.4.post1
-  - sphinx-autobuild==0.6.0
-  - sphinx-rtd-theme==0.2.4
-  - sshkeys==0.5
-  - tables==3.3.0
-  - tmuxpair==1.0.0
-  - urllib3==1.21.1
   - version-information==1.0.3
-  - watchdog==0.8.3
-  - youtube-dl==2017.9.11
