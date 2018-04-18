@@ -114,36 +114,37 @@ def test_no_feedback_system(model_no_fb, tmpdir):
     * type = dissipator, filename = D1.dat, real_op = F, op_unit = MHz, &
       sparsity_model = indexed
 
-    observables: type = matrix, real_op = F, n_surf = 100, time_unit = microsec
-    * filename = O1.dat, outfile = darkstate_cond.dat, exp_unit = MHz, &
-      is_real = T, column_label = <L^+L>, op_unit = MHz, sparsity_model = indexed
-    * filename = O2.dat, outfile = qubit_pop.dat, exp_unit = dimensionless, &
-      is_real = T, column_label = P(00), op_unit = dimensionless, &
-      sparsity_model = indexed
-    * filename = O3.dat, outfile = qubit_pop.dat, exp_unit = dimensionless, &
-      is_real = T, column_label = P(01), op_unit = dimensionless, &
-      sparsity_model = indexed
-    * filename = O4.dat, outfile = qubit_pop.dat, exp_unit = dimensionless, &
-      is_real = T, column_label = P(10), op_unit = dimensionless, &
-      sparsity_model = indexed
-    * filename = O5.dat, outfile = qubit_pop.dat, exp_unit = dimensionless, &
-      is_real = T, column_label = P(11), op_unit = dimensionless, &
-      sparsity_model = indexed
-    * filename = O6.dat, outfile = 10_01_coherence.dat, exp_unit = dimensionless, &
-      is_real = F, column_label = |10><01|, op_unit = dimensionless, &
-      sparsity_model = indexed
-    * filename = O7.dat, outfile = excitation.dat, exp_unit = dimensionless, &
-      is_real = T, column_label = q1, op_unit = dimensionless, &
-      sparsity_model = banded
-    * filename = O8.dat, outfile = excitation.dat, exp_unit = dimensionless, &
-      is_real = T, column_label = c1, op_unit = dimensionless, &
-      sparsity_model = banded
-    * filename = O9.dat, outfile = excitation.dat, exp_unit = dimensionless, &
-      is_real = T, column_label = q2, op_unit = dimensionless, &
-      sparsity_model = banded
-    * filename = O10.dat, outfile = excitation.dat, exp_unit = dimensionless, &
-      is_real = T, column_label = c2, op_unit = dimensionless, &
-      sparsity_model = banded
+    observables: type = matrix, real_op = F, op_type = pot, n_surf = 100, &
+      time_unit = microsec
+    * filename = O1.dat, sparsity_model = indexed, outfile = darkstate_cond.dat, &
+      exp_unit = MHz, is_real = T, column_label = <L^+L>, op_unit = MHz
+    * filename = O2.dat, sparsity_model = indexed, outfile = qubit_pop.dat, &
+      exp_unit = dimensionless, is_real = T, column_label = P(00), &
+      op_unit = dimensionless
+    * filename = O3.dat, sparsity_model = indexed, outfile = qubit_pop.dat, &
+      exp_unit = dimensionless, is_real = T, column_label = P(01), &
+      op_unit = dimensionless
+    * filename = O4.dat, sparsity_model = indexed, outfile = qubit_pop.dat, &
+      exp_unit = dimensionless, is_real = T, column_label = P(10), &
+      op_unit = dimensionless
+    * filename = O5.dat, sparsity_model = indexed, outfile = qubit_pop.dat, &
+      exp_unit = dimensionless, is_real = T, column_label = P(11), &
+      op_unit = dimensionless
+    * filename = O6.dat, sparsity_model = indexed, outfile = 10_01_coherence.dat, &
+      exp_unit = dimensionless, is_real = F, column_label = |10><01|, &
+      op_unit = dimensionless
+    * filename = O7.dat, sparsity_model = banded, outfile = excitation.dat, &
+      exp_unit = dimensionless, is_real = T, column_label = q1, &
+      op_unit = dimensionless
+    * filename = O8.dat, sparsity_model = banded, outfile = excitation.dat, &
+      exp_unit = dimensionless, is_real = T, column_label = c1, &
+      op_unit = dimensionless
+    * filename = O9.dat, sparsity_model = banded, outfile = excitation.dat, &
+      exp_unit = dimensionless, is_real = T, column_label = q2, &
+      op_unit = dimensionless
+    * filename = O10.dat, sparsity_model = banded, outfile = excitation.dat, &
+      exp_unit = dimensionless, is_real = T, column_label = c2, &
+      op_unit = dimensionless
 
     user_strings: time_unit = microsec, write_jump_record = jump_record.dat, &
       write_final_state = psi_final.dat
@@ -181,36 +182,37 @@ def test_no_feedback_oct_fw_system(model_no_fb_oct_fw, tmpdir):
     * type = dissipator, filename = D1.dat, real_op = F, op_unit = MHz, &
       sparsity_model = indexed
 
-    observables: type = matrix, real_op = F, n_surf = 100, time_unit = microsec
-    * filename = O1.dat, outfile = darkstate_cond.dat, exp_unit = MHz, &
-      is_real = T, column_label = <L^+L>, op_unit = MHz, sparsity_model = indexed
-    * filename = O2.dat, outfile = qubit_pop.dat, exp_unit = dimensionless, &
-      is_real = T, column_label = P(00), op_unit = dimensionless, &
-      sparsity_model = indexed
-    * filename = O3.dat, outfile = qubit_pop.dat, exp_unit = dimensionless, &
-      is_real = T, column_label = P(01), op_unit = dimensionless, &
-      sparsity_model = indexed
-    * filename = O4.dat, outfile = qubit_pop.dat, exp_unit = dimensionless, &
-      is_real = T, column_label = P(10), op_unit = dimensionless, &
-      sparsity_model = indexed
-    * filename = O5.dat, outfile = qubit_pop.dat, exp_unit = dimensionless, &
-      is_real = T, column_label = P(11), op_unit = dimensionless, &
-      sparsity_model = indexed
-    * filename = O6.dat, outfile = 10_01_coherence.dat, exp_unit = dimensionless, &
-      is_real = F, column_label = |10><01|, op_unit = dimensionless, &
-      sparsity_model = indexed
-    * filename = O7.dat, outfile = excitation.dat, exp_unit = dimensionless, &
-      is_real = T, column_label = q1, op_unit = dimensionless, &
-      sparsity_model = banded
-    * filename = O8.dat, outfile = excitation.dat, exp_unit = dimensionless, &
-      is_real = T, column_label = c1, op_unit = dimensionless, &
-      sparsity_model = banded
-    * filename = O9.dat, outfile = excitation.dat, exp_unit = dimensionless, &
-      is_real = T, column_label = q2, op_unit = dimensionless, &
-      sparsity_model = banded
-    * filename = O10.dat, outfile = excitation.dat, exp_unit = dimensionless, &
-      is_real = T, column_label = c2, op_unit = dimensionless, &
-      sparsity_model = banded
+    observables: type = matrix, real_op = F, op_type = pot, n_surf = 100, &
+      time_unit = microsec
+    * filename = O1.dat, sparsity_model = indexed, outfile = darkstate_cond.dat, &
+      exp_unit = MHz, is_real = T, column_label = <L^+L>, op_unit = MHz
+    * filename = O2.dat, sparsity_model = indexed, outfile = qubit_pop.dat, &
+      exp_unit = dimensionless, is_real = T, column_label = P(00), &
+      op_unit = dimensionless
+    * filename = O3.dat, sparsity_model = indexed, outfile = qubit_pop.dat, &
+      exp_unit = dimensionless, is_real = T, column_label = P(01), &
+      op_unit = dimensionless
+    * filename = O4.dat, sparsity_model = indexed, outfile = qubit_pop.dat, &
+      exp_unit = dimensionless, is_real = T, column_label = P(10), &
+      op_unit = dimensionless
+    * filename = O5.dat, sparsity_model = indexed, outfile = qubit_pop.dat, &
+      exp_unit = dimensionless, is_real = T, column_label = P(11), &
+      op_unit = dimensionless
+    * filename = O6.dat, sparsity_model = indexed, outfile = 10_01_coherence.dat, &
+      exp_unit = dimensionless, is_real = F, column_label = |10><01|, &
+      op_unit = dimensionless
+    * filename = O7.dat, sparsity_model = banded, outfile = excitation.dat, &
+      exp_unit = dimensionless, is_real = T, column_label = q1, &
+      op_unit = dimensionless
+    * filename = O8.dat, sparsity_model = banded, outfile = excitation.dat, &
+      exp_unit = dimensionless, is_real = T, column_label = c1, &
+      op_unit = dimensionless
+    * filename = O9.dat, sparsity_model = banded, outfile = excitation.dat, &
+      exp_unit = dimensionless, is_real = T, column_label = q2, &
+      op_unit = dimensionless
+    * filename = O10.dat, sparsity_model = banded, outfile = excitation.dat, &
+      exp_unit = dimensionless, is_real = T, column_label = c2, &
+      op_unit = dimensionless
 
     psi:
     * type = file, filename = psi_00.dat, label = 00
@@ -277,36 +279,37 @@ def test_no_feedback_oct_gate_system(model_no_fb_oct_gate, tmpdir):
     * type = dissipator, filename = D1.dat, real_op = F, op_unit = MHz, &
       sparsity_model = indexed
 
-    observables: type = matrix, real_op = F, n_surf = 100, time_unit = microsec
-    * filename = O1.dat, outfile = darkstate_cond.dat, exp_unit = MHz, &
-      is_real = T, column_label = <L^+L>, op_unit = MHz, sparsity_model = indexed
-    * filename = O2.dat, outfile = qubit_pop.dat, exp_unit = dimensionless, &
-      is_real = T, column_label = P(00), op_unit = dimensionless, &
-      sparsity_model = indexed
-    * filename = O3.dat, outfile = qubit_pop.dat, exp_unit = dimensionless, &
-      is_real = T, column_label = P(01), op_unit = dimensionless, &
-      sparsity_model = indexed
-    * filename = O4.dat, outfile = qubit_pop.dat, exp_unit = dimensionless, &
-      is_real = T, column_label = P(10), op_unit = dimensionless, &
-      sparsity_model = indexed
-    * filename = O5.dat, outfile = qubit_pop.dat, exp_unit = dimensionless, &
-      is_real = T, column_label = P(11), op_unit = dimensionless, &
-      sparsity_model = indexed
-    * filename = O6.dat, outfile = 10_01_coherence.dat, exp_unit = dimensionless, &
-      is_real = F, column_label = |10><01|, op_unit = dimensionless, &
-      sparsity_model = indexed
-    * filename = O7.dat, outfile = excitation.dat, exp_unit = dimensionless, &
-      is_real = T, column_label = q1, op_unit = dimensionless, &
-      sparsity_model = banded
-    * filename = O8.dat, outfile = excitation.dat, exp_unit = dimensionless, &
-      is_real = T, column_label = c1, op_unit = dimensionless, &
-      sparsity_model = banded
-    * filename = O9.dat, outfile = excitation.dat, exp_unit = dimensionless, &
-      is_real = T, column_label = q2, op_unit = dimensionless, &
-      sparsity_model = banded
-    * filename = O10.dat, outfile = excitation.dat, exp_unit = dimensionless, &
-      is_real = T, column_label = c2, op_unit = dimensionless, &
-      sparsity_model = banded
+    observables: type = matrix, real_op = F, op_type = pot, n_surf = 100, &
+      time_unit = microsec
+    * filename = O1.dat, sparsity_model = indexed, outfile = darkstate_cond.dat, &
+      exp_unit = MHz, is_real = T, column_label = <L^+L>, op_unit = MHz
+    * filename = O2.dat, sparsity_model = indexed, outfile = qubit_pop.dat, &
+      exp_unit = dimensionless, is_real = T, column_label = P(00), &
+      op_unit = dimensionless
+    * filename = O3.dat, sparsity_model = indexed, outfile = qubit_pop.dat, &
+      exp_unit = dimensionless, is_real = T, column_label = P(01), &
+      op_unit = dimensionless
+    * filename = O4.dat, sparsity_model = indexed, outfile = qubit_pop.dat, &
+      exp_unit = dimensionless, is_real = T, column_label = P(10), &
+      op_unit = dimensionless
+    * filename = O5.dat, sparsity_model = indexed, outfile = qubit_pop.dat, &
+      exp_unit = dimensionless, is_real = T, column_label = P(11), &
+      op_unit = dimensionless
+    * filename = O6.dat, sparsity_model = indexed, outfile = 10_01_coherence.dat, &
+      exp_unit = dimensionless, is_real = F, column_label = |10><01|, &
+      op_unit = dimensionless
+    * filename = O7.dat, sparsity_model = banded, outfile = excitation.dat, &
+      exp_unit = dimensionless, is_real = T, column_label = q1, &
+      op_unit = dimensionless
+    * filename = O8.dat, sparsity_model = banded, outfile = excitation.dat, &
+      exp_unit = dimensionless, is_real = T, column_label = c1, &
+      op_unit = dimensionless
+    * filename = O9.dat, sparsity_model = banded, outfile = excitation.dat, &
+      exp_unit = dimensionless, is_real = T, column_label = q2, &
+      op_unit = dimensionless
+    * filename = O10.dat, sparsity_model = banded, outfile = excitation.dat, &
+      exp_unit = dimensionless, is_real = T, column_label = c2, &
+      op_unit = dimensionless
 
     psi:
     * type = file, filename = psi_00.dat, label = 00
@@ -350,6 +353,15 @@ def test_no_feedback_oct_gate_system(model_no_fb_oct_gate, tmpdir):
     assert QDYN.linalg.norm(diff) < 1e-14
 
 
+@pytest.mark.xfail(reason=r'''
+Incompatible change in QNET
+
+The way QNET handles custom identifiers for Create/Destroy changed in
+commit f5d759a9bbe844d616e82e621dcd2d773fe08297
+
+Some of the code in this epor requires an older version of QNET (but nothing
+critical for publication)
+''')
 def test_crossed_cavity_slh():
     slh = crossed_cavity_network.network_slh(
         n_cavity=2, n_nodes=2, topology='FB')
