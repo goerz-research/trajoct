@@ -244,6 +244,6 @@ dependencies:
   - prompt-toolkit==1.0.14
   - pyx==0.14.1
   - git+https://github.com/goerz/qdynpylib.git@90e3f869f81f206c1da5003cac6115291975b14c#egg=qdyn-0.3.0
-  - git+https://github.com/mabuchilab/QNET.git@119a05a670b013879ab4a857e29d68c138519b56#egg=QNET-2.0.0-dev
+  - git+https://github.com/mabuchilab/QNET.git@e15abc812b773205e96f3889a700ccb93a6943dd#egg=QNET-2.0.0-dev
   - qutip==4.2.0
   - version-information==1.0.3
