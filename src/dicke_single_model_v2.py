@@ -6,7 +6,8 @@ import qutip
 
 import QDYN
 from .qdyn_model_v2 import make_qdyn_oct_model, err_state_to_state
-
+from .qdyn_single_excitation_model_v1 import (
+    make_single_excitation_qdyn_oct_model)
 from .dicke_half_model_v2 import (
     pi_pulse, zero_pulse, num_vals, get_mu_1, dicke_guess_controls)
 
@@ -19,7 +20,8 @@ def write_dicke_single_model(
         slh, rf, T, theta=0, E0_cycles=2, mcwf=False, non_herm=False,
         lambda_a=1.0, J_T_conv=1e-4, iter_stop=5000, nt=None,
         max_ram_mb=100000, kappa=0.01, seed=None, observables='all',
-        keep_pulses='prev', config='config'):
+        keep_pulses='prev', single_excitation_subspace=False,
+        config='config'):
     """Write model to the given runfolder,
 
     Args:
@@ -49,6 +51,8 @@ def write_dicke_single_model(
         seed (int or None): seed for MCWF
         observables (str): One of 'all', 'last'
         keep_pulses (str): One of 'prev', 'all' (which old OCT pulses to keep)
+        single_excitation_subspace (bool): Use a QDYN model specifically
+            targeted to operate in the zero/single-excitation subspace
         config (str): The name of the config file, inside `rf`
 
     Note:
@@ -68,13 +72,22 @@ def write_dicke_single_model(
     n_nodes = slh.n_nodes
     controls = dicke_guess_controls(slh=slh, theta=theta, T=T,
                                     E0_cycles=E0_cycles, nt=nt, kappa=kappa)
-    qdyn_model = make_qdyn_oct_model(
-        slh, num_vals=num_vals(theta=theta, n_nodes=n_nodes, kappa=kappa),
-        controls=controls, energy_unit='dimensionless',
-        mcwf=mcwf, non_herm=non_herm, oct_target='dicke_1',
-        lambda_a=lambda_a, iter_stop=iter_stop, keep_pulses=keep_pulses,
-        J_T_conv=J_T_conv, max_ram_mb=max_ram_mb, seed=seed,
-        observables=observables)
+    if single_excitation_subspace:
+        qdyn_model = make_single_excitation_qdyn_oct_model(
+            slh, num_vals=num_vals(theta=theta, n_nodes=n_nodes, kappa=kappa),
+            controls=controls, energy_unit='dimensionless',
+            mcwf=mcwf, non_herm=non_herm, oct_target='dicke_1',
+            lambda_a=lambda_a, iter_stop=iter_stop, keep_pulses=keep_pulses,
+            J_T_conv=J_T_conv, max_ram_mb=max_ram_mb, seed=seed,
+            observables=observables)
+    else:
+        qdyn_model = make_qdyn_oct_model(
+            slh, num_vals=num_vals(theta=theta, n_nodes=n_nodes, kappa=kappa),
+            controls=controls, energy_unit='dimensionless',
+            mcwf=mcwf, non_herm=non_herm, oct_target='dicke_1',
+            lambda_a=lambda_a, iter_stop=iter_stop, keep_pulses=keep_pulses,
+            J_T_conv=J_T_conv, max_ram_mb=max_ram_mb, seed=seed,
+            observables=observables)
     qdyn_model.user_data['state_label'] = '10'  # for prop
     if (mcwf, non_herm) == (False, False):
         qdyn_model.user_data['rho'] = True

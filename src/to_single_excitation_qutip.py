@@ -106,6 +106,7 @@ def construct_bit_index(full_space):
     zero.setall(0)
     bit_index = {zero.to01(): 0}  # zero excitation subspace
     for (i, hs) in enumerate(reversed(full_space.local_factors)):
+        assert hs.dimension == 2
         key = copy(zero)
         key[N-i-1] = 1
         bit_index[key.to01()] = i+1

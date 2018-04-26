@@ -2,11 +2,12 @@ from collections import OrderedDict
 from sympy import symbols, srepr
 
 from qnet.algebra.abstract_algebra import extra_binary_rules
-from qnet.algebra.operator_algebra import OperatorPlus, create_operator_pm_cc
+from qnet.algebra.operator_algebra import (
+    OperatorPlus, create_operator_pm_cc, ZeroOperator)
 from qnet.algebra.hilbert_space_algebra import LocalSpace, ProductSpace
 
 
-def split_hamiltonian(H, use_cc=True, controls='Omega'):
+def split_hamiltonian(H, use_cc=True, controls='Omega', fast=False):
     """Split the given symbolic Hamiltonian into drift, interaction, and drive
     Hamiltonians. Returns a dictionary with keys 'H0', 'Hint', 'Hd_{control}',
     ..., where {control} is the string rendering of the control symbol. The
@@ -18,9 +19,14 @@ def split_hamiltonian(H, use_cc=True, controls='Omega'):
             easier readability
         controls (str or list): List of control symbols. If a string, every
             symbol whose name starts with that string is considered a control.
+        fast (bool): If True, do a "fast" substitution suitable for plugging in
+            numerical values. Use with caution.
         """
     res = OrderedDict()
-    H = H.expand().simplify_scalar()
+    if fast:
+        H = H.expand()
+    else:
+        H = H.expand().simplify_scalar()
     if isinstance(controls, str):
         controls = sorted(
                 [sym for sym in H.all_symbols()
@@ -28,11 +34,17 @@ def split_hamiltonian(H, use_cc=True, controls='Omega'):
                 key=str)
     n_controls = len(controls)
     Hdrift = H.substitute({control: 0 for control in controls})
-    res['H0'] = OperatorPlus.create(
-            *[H for H in Hdrift.operands if isinstance(H.space, LocalSpace)])
-    res['Hint'] = OperatorPlus.create(
-            *[H for H in Hdrift.operands if isinstance(H.space, ProductSpace)]
-            ).expand().simplify_scalar()
+    if fast:
+        res['H0'] = Hdrift
+        res['Hint'] = ZeroOperator
+    else:
+        res['H0'] = OperatorPlus.create(*[
+            H for H in Hdrift.operands if isinstance(H.space, LocalSpace)])
+        res['Hint'] = (
+            OperatorPlus.create(*[
+                H for H in Hdrift.operands
+                if isinstance(H.space, ProductSpace)])
+            .expand().simplify_scalar())
     Hdrive = (H - Hdrift).expand()
 
     def all_zero_except(controls, i):
